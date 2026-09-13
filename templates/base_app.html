@@ -106,7 +106,7 @@
             <p>You'll need to sign in again to access your dashboard.</p>
             <div class="logout-modal-actions">
                 <button type="button" class="logout-btn-cancel" data-close-logout>Cancel</button>
-                <form method="post" action="{% url 'accounts:logout' %}" style="margin:0;">
+                <form method="post" action="{% url 'account_logout' %}" style="margin:0;">
                     {% csrf_token %}
                     <button type="submit" class="logout-btn-confirm">Yes, log out</button>
                 </form>
