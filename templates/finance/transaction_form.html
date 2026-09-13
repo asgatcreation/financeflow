@@ -1,0 +1,92 @@
+{% extends "base_app.html" %}
+{% block title %}{{ page_title }} · FinanceFlow{% endblock %}
+
+{% block content %}
+<div class="app-content-narrow">
+    <div class="form-card">
+        <header class="form-card-header">
+            <h1>{{ page_title }}</h1>
+            <a href="{% url 'finance:transactions' %}" class="link">← Back</a>
+        </header>
+
+        <form method="post" class="task-form">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="form-errors">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+        <div class="form-row">
+                <div class="form-group">
+                    <label>Type *</label>
+                    {{ form.type }}
+                </div>
+                <div class="form-group">
+                    <label>Amount *</label>
+                    {{ form.amount }}
+                    {% if form.amount.errors %}<small class="error">{{ form.amount.errors.0 }}</small>{% endif %}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Currency *</label>
+                    {{ form.currency }}
+                    {% if form.currency.errors %}<small class="error">{{ form.currency.errors.0 }}</small>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label>Date *</label>
+                    {{ form.date }}
+                    {% if form.date.errors %}<small class="error">{{ form.date.errors.0 }}</small>{% endif %}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Category</label>
+                {{ form.category }}
+                {% if form.category.errors %}<small class="error">{{ form.category.errors.0 }}</small>{% endif %}
+            </div>
+
+            <div class="form-group">
+                <label>Description *</label>
+                {{ form.description }}
+            </div>
+
+            <div class="form-group">
+                <label>Notes</label>
+                {{ form.notes }}
+            </div>
+
+            <div class="form-actions">
+                <a href="{% url 'finance:transactions' %}" class="btn btn-ghost">Cancel</a>
+                <button type="submit" class="btn btn-primary">{{ button_text }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Simple dynamic category filter based on selected type
+    document.addEventListener('DOMContentLoaded', function() {
+        const typeSelect = document.getElementById('id_type');
+        const catSelect = document.getElementById('id_category');
+        if (!typeSelect || !catSelect) return;
+
+        const allOptions = Array.from(catSelect.options);
+        function filterCats() {
+            const t = typeSelect.value;
+            catSelect.innerHTML = '';
+            allOptions.forEach(opt => {
+                if (!opt.value) { catSelect.appendChild(opt); return; }
+                const catType = opt.getAttribute('data-type') || '';
+                if (catType === t) catSelect.appendChild(opt.cloneNode(true));
+            });
+        }
+        // If options don't have data-type yet, we skip filtering
+        const hasTypeAttrs = allOptions.some(o => o.getAttribute('data-type'));
+        if (hasTypeAttrs) {
+            typeSelect.addEventListener('change', filterCats);
+            filterCats();
+        }
+    });
+</script>
+{% endblock %}

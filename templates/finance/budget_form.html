@@ -1,0 +1,42 @@
+{% extends "base_app.html" %}
+{% block title %}{{ page_title }} · FinanceFlow{% endblock %}
+
+{% block content %}
+<div class="app-content-narrow">
+    <div class="form-card">
+        <header class="form-card-header">
+            <h1>{{ page_title }}</h1>
+            <a href="{% url 'finance:budgets' %}" class="link">← Back</a>
+        </header>
+        <form method="post" class="task-form">
+            {% csrf_token %}
+            <div class="form-group">
+                <label>Category *</label>
+                {{ form.category }}
+                {% if form.category.errors %}<small class="error">{{ form.category.errors.0 }}</small>{% endif %}
+            </div>
+            <div class="form-group">
+                <label>Limit amount *</label>
+                {{ form.amount }}
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Month *</label>
+                    {{ form.month }}
+                </div>
+                <div class="form-group">
+                    <label>Year *</label>
+                    {{ form.year }}
+                </div>
+            </div>
+            {% if form.non_field_errors %}
+                <div class="form-errors">{{ form.non_field_errors }}</div>
+            {% endif %}
+            <div class="form-actions">
+                <a href="{% url 'finance:budgets' %}" class="btn btn-ghost">Cancel</a>
+                <button type="submit" class="btn btn-primary">{{ button_text }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

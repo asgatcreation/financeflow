@@ -1,0 +1,28 @@
+{% extends "base_app.html" %}
+{% block title %}{{ page_title }} · FinanceFlow{% endblock %}
+
+{% block content %}
+<div class="app-content-narrow">
+    <div class="form-card">
+        <header class="form-card-header">
+            <h1>{{ page_title }}</h1>
+            <a href="{% url 'finance:categories' %}" class="link">← Back</a>
+        </header>
+
+        <form method="post" class="task-form">
+            {% csrf_token %}
+            {% for field in form %}
+                <div class="form-group">
+                    <label>{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}<small class="error">{{ field.errors.0 }}</small>{% endif %}
+                </div>
+            {% endfor %}
+            <div class="form-actions">
+                <a href="{% url 'finance:categories' %}" class="btn btn-ghost">Cancel</a>
+                <button type="submit" class="btn btn-primary">{{ button_text }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

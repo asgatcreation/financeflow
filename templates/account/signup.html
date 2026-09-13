@@ -1,0 +1,541 @@
+{% load socialaccount %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign up · FinanceFlow</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { min-height: 100%; }
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+            display: flex;
+            min-height: 100vh;
+            min-height: 100dvh;
+            background: #fff;
+            color: #0f172a;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Smooth fade-in on page load */
+        body { animation: authPageIn 0.35s ease-out; }
+        @keyframes authPageIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Smooth fade-out when navigating away */
+        body.auth-leaving { animation: authPageOut 0.25s ease-in forwards; }
+        @keyframes authPageOut {
+            from { opacity: 1; }
+            to   { opacity: 0; }
+        }
+
+
+
+        .auth-left {
+            flex: 1.05;
+            background: #0a0f1e;
+            color: #fff;
+            position: relative;
+            overflow: hidden;
+            padding: 3rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .auth-left::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 30% 30%, rgba(16, 185, 129, 0.35), transparent 50%),
+                radial-gradient(circle at 70% 70%, rgba(14, 165, 233, 0.25), transparent 50%);
+        }
+        .auth-left::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+            background-size: 48px 48px;
+            mask-image: radial-gradient(ellipse at center, black, transparent 75%);
+            -webkit-mask-image: radial-gradient(ellipse at center, black, transparent 75%);
+        }
+        .auth-left > * { position: relative; z-index: 1; }
+
+        .auth-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            font-weight: 800;
+            font-size: 1.15rem;
+            letter-spacing: -0.02em;
+        }
+        .auth-brand-mark {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #10b981, #34d399);
+            display: grid;
+            place-items: center;
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #fff;
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .auth-carousel { position: relative; min-height: 340px; }
+        .auth-slide {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            transition: opacity 0.8s ease, transform 0.8s ease;
+            transform: translateY(20px);
+        }
+        .auth-slide.active { opacity: 1; transform: translateY(0); }
+        .auth-slide-num {
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: #5eead4;
+            margin-bottom: 1.25rem;
+        }
+        .auth-slide h2 {
+            font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+            font-weight: 800;
+            line-height: 1.1;
+            letter-spacing: -0.03em;
+            margin-bottom: 1rem;
+            color: #fff;
+        }
+        .auth-slide p {
+            font-size: 1rem;
+            line-height: 1.65;
+            color: rgba(255, 255, 255, 0.7);
+            max-width: 440px;
+            font-weight: 400;
+        }
+
+        .auth-feature-list {
+            margin-top: 1.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+        }
+        .auth-feature-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.92rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        .auth-feature-check {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            color: #5eead4;
+            display: grid;
+            place-items: center;
+            font-size: 0.75rem;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .auth-dots {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 2rem;
+        }
+        .auth-dot {
+            width: 24px;
+            height: 4px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            transition: all 0.3s;
+        }
+        .auth-dot.active {
+            background: #10b981;
+            width: 40px;
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+        }
+
+        .auth-left-footer {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .auth-right {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem 2rem;
+            background: #fff;
+        }
+        .auth-form-wrap { width: 100%; max-width: 400px; }
+        .auth-form-head { margin-bottom: 1.75rem; }
+        .auth-form-head h1 {
+            font-size: 1.85rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            margin-bottom: 0.5rem;
+            color: #0f172a;
+        }
+        .auth-form-head p {
+            color: #64748b;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .auth-alert {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #b91c1c;
+            padding: 0.85rem 1rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 1.25rem;
+            line-height: 1.5;
+        }
+
+        .auth-field { margin-bottom: 1rem; }
+        .auth-field label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 0.5rem;
+        }
+        .auth-field input {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            background: #fff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #0f172a;
+            transition: all 0.15s;
+        }
+        .auth-field input::placeholder { color: #94a3b8; }
+        .auth-field input:focus {
+            outline: none;
+            border-color: #10b981;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+        }
+        .auth-help {
+            display: block;
+            margin-top: 0.4rem;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+
+        .auth-submit {
+            width: 100%;
+            padding: 0.95rem 1.5rem;
+            background: #0f172a;
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-top: 0.75rem;
+        }
+        .auth-submit:hover {
+            background: #1e293b;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.2);
+        }
+
+        .auth-or {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            margin: 1.5rem 0;
+            color: #94a3b8;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        .auth-or::before, .auth-or::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: #e2e8f0;
+        }
+
+        .auth-google {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.65rem;
+            width: 100%;
+            padding: 0.85rem 1.25rem;
+            background: #fff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #0f172a;
+            text-decoration: none;
+            transition: all 0.15s;
+        }
+        .auth-google:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+        }
+
+        .auth-switch {
+            text-align: center;
+            margin-top: 1.5rem;
+            color: #64748b;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .auth-switch a {
+            color: #059669;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        @media (max-width: 900px) {
+            body { flex-direction: column; }
+            .auth-left {
+                flex: none;
+                min-height: 320px;
+                padding: 2rem 1.75rem;
+            }
+            .auth-carousel { min-height: 220px; }
+            .auth-slide h2 { font-size: 1.55rem; }
+            .auth-left-footer { display: none; }
+            .auth-right { padding: 2.5rem 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="auth-left">
+        <div class="auth-brand">
+            <div class="auth-brand-mark">F</div>
+            <span>FinanceFlow</span>
+        </div>
+
+        <div class="auth-carousel">
+            <div class="auth-slide active">
+                <div class="auth-slide-num">01 — Free forever</div>
+                <h2>Start tracking in 30 seconds.</h2>
+                <p>No credit card. No setup fee. Everything included, forever.</p>
+                <div class="auth-feature-list">
+                    <div class="auth-feature-item">
+                        <span class="auth-feature-check">✓</span>
+                        <span>Up to 5 currencies at once</span>
+                    </div>
+                    <div class="auth-feature-item">
+                        <span class="auth-feature-check">✓</span>
+                        <span>Unlimited transactions</span>
+                    </div>
+                    <div class="auth-feature-item">
+                        <span class="auth-feature-check">✓</span>
+                        <span>Interactive charts and reports</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="auth-slide">
+                <div class="auth-slide-num">02 — Ready to go</div>
+                <h2>15 categories pre-loaded.</h2>
+                <p>Groceries, Rent, Transport, Salary — plus every other common one. Add your own anytime.</p>
+                <div class="auth-feature-list">
+                    <div class="auth-feature-item">
+                        <span class="auth-feature-check">✓</span>
+                        <span>Pre-seeded with 15 categories</span>
+                    </div>
+                    <div class="auth-feature-item">
+                        <span class="auth-feature-check">✓</span>
+                        <span>Custom icons and colors</span>
+                    </div>
+                    <div class="auth-feature-item">
+                        <span class="auth-feature-check">✓</span>
+                        <span>Budgets per category</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="auth-slide">
+                <div class="auth-slide-num">03 — Private by default</div>
+                <h2>Your data, your account.</h2>
+                <p>Every user sees only their own transactions. Always. Forever.</p>
+                <div class="auth-feature-list">
+                    <div class="auth-feature-item">
+                        <span class="auth-feature-check">✓</span>
+                        <span>Per-user data isolation</span>
+                    </div>
+                    <div class="auth-feature-item">
+                        <span class="auth-feature-check">✓</span>
+                        <span>CSV export anytime</span>
+                    </div>
+                    <div class="auth-feature-item">
+                        <span class="auth-feature-check">✓</span>
+                        <span>Google sign-in available</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="auth-dots">
+                <button class="auth-dot active" data-slide="0" aria-label="Slide 1"></button>
+                <button class="auth-dot" data-slide="1" aria-label="Slide 2"></button>
+                <button class="auth-dot" data-slide="2" aria-label="Slide 3"></button>
+            </div>
+            <div class="auth-left-footer" style="margin-top: 1rem;">
+                © {% now "Y" %} FinanceFlow
+            </div>
+        </div>
+    </div>
+
+    <div class="auth-right">
+        <div class="auth-form-wrap">
+            <div class="auth-form-head">
+                <h1>Create your account</h1>
+                <p>Start tracking in 30 seconds.</p>
+            </div>
+
+            {% if form.errors %}
+                <div class="auth-alert">
+                    {% for field, errors in form.errors.items %}
+                        {% for error in errors %}<div>{{ error }}</div>{% endfor %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'account_signup' %}">
+                {% csrf_token %}
+
+                <div class="auth-field">
+                    <label for="id_username">Username</label>
+                    <input type="text" name="username" id="id_username" required maxlength="150"
+                           autocomplete="username" placeholder="Choose a username">
+                </div>
+
+                <div class="auth-field">
+                    <label for="id_email">Email</label>
+                    <input type="email" name="email" id="id_email" required
+                           autocomplete="email" placeholder="you@example.com">
+                </div>
+
+                <div class="auth-field">
+                    <label for="id_password1">Password</label>
+                    <input type="password" name="password1" id="id_password1" required
+                           autocomplete="new-password" placeholder="Create a password">
+                </div>
+
+                <div class="auth-field">
+                    <label for="id_password2">Confirm password</label>
+                    <input type="password" name="password2" id="id_password2" required
+                           autocomplete="new-password" placeholder="Repeat password">
+                </div>
+
+                {% if redirect_field_value %}
+                    <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
+                {% endif %}
+
+                <button type="submit" class="auth-submit">Create account →</button>
+            </form>
+
+            <div class="auth-or"><span>or sign up with</span></div>
+
+            <a href="{% provider_login_url 'google' %}" class="auth-google">
+                <svg width="20" height="20" viewBox="0 0 48 48">
+                    <path fill="#FFC107" d="M43.6 20.5h-1.9V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 20-8.9 20-20 0-1.2-.1-2.4-.4-3.5z"/>
+                    <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
+                    <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.2-7.9l-6.6 5.1C9.6 39.6 16.2 44 24 44z"/>
+                    <path fill="#1976D2" d="M43.6 20.5H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.6l6.2 5.2c-.4.4 6.6-4.8 6.6-15.3 0-1.2-.1-2.4-.4-3.5z"/>
+                </svg>
+                Sign up with Google
+            </a>
+
+            <p class="auth-switch">
+                Already have an account? <a href="{% url 'account_login' %}">Log in →</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const slides = document.querySelectorAll('.auth-slide');
+        const dots = document.querySelectorAll('.auth-dot');
+        let current = 0;
+        let timer;
+
+        function showSlide(i) {
+            slides.forEach((s, idx) => s.classList.toggle('active', idx === i));
+            dots.forEach((d, idx) => d.classList.toggle('active', idx === i));
+            current = i;
+        }
+
+        function nextSlide() { showSlide((current + 1) % slides.length); }
+
+        function startAuto() {
+            if (timer) clearInterval(timer);
+            timer = setInterval(nextSlide, 5500);
+        }
+
+        dots.forEach(dot => {
+            dot.addEventListener('click', () => {
+                showSlide(parseInt(dot.dataset.slide));
+                startAuto();
+            });
+        });
+
+        startAuto();
+    </script>
+
+    <script>
+        // Smooth transition when leaving the page (clicking a link)
+        document.querySelectorAll('a[href]:not([href^="#"]):not([target="_blank"])').forEach(function (link) {
+            link.addEventListener('click', function (e) {
+                var href = link.getAttribute('href');
+                if (!href || href.startsWith('javascript:')) return;
+                e.preventDefault();
+                document.body.classList.add('auth-leaving');
+                setTimeout(function () { window.location.href = href; }, 220);
+            });
+        });
+
+        // Also handle form submissions
+        document.querySelectorAll('form').forEach(function (form) {
+            form.addEventListener('submit', function () {
+                document.body.classList.add('auth-leaving');
+            });
+        });
+    </script>
+
+
+</body>
+</html>

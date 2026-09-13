@@ -1,0 +1,173 @@
+{% load i18n %}
+
+<style>
+    .ff-model-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 1rem;
+    }
+    .ff-model-card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 1.35rem;
+        transition: all 0.2s;
+        display: flex;
+        flex-direction: column;
+        gap: 1.1rem;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    }
+    .ff-model-card:hover {
+        border-color: #cbd5e1;
+        transform: translateY(-3px);
+        box-shadow: 0 16px 32px -8px rgba(15, 23, 42, 0.1);
+    }
+    .ff-model-head {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+    }
+    .ff-model-icon {
+        width: 46px; height: 46px;
+        border-radius: 13px;
+        background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+        color: #047857;
+        display: grid; place-items: center;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+        border: 1px solid rgba(16, 185, 129, 0.15);
+    }
+    .ff-model-title {
+        font-size: 1.02rem;
+        font-weight: 800;
+        color: #0f172a !important;
+        text-decoration: none !important;
+        line-height: 1.25;
+        letter-spacing: -0.015em;
+        display: block;
+    }
+    .ff-model-title:hover { color: #059669 !important; }
+    .ff-model-appname {
+        font-size: 0.68rem;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        font-weight: 800;
+        margin-top: 0.2rem;
+    }
+    .ff-model-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: auto;
+    }
+    .ff-model-btn {
+        font-size: 0.78rem;
+        font-weight: 700;
+        padding: 0.5rem 0.9rem;
+        border-radius: 10px;
+        text-decoration: none !important;
+        border: 1px solid #cbd5e1;
+        transition: all 0.15s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        letter-spacing: -0.005em;
+    }
+    .ff-model-btn-view {
+        background: #fff;
+        color: #0f172a !important;
+    }
+    .ff-model-btn-view:hover {
+        background: #f1f5f9;
+        border-color: #94a3b8;
+    }
+    .ff-model-btn-add {
+        background: #0f172a;
+        color: #fff !important;
+        border-color: #0f172a;
+    }
+    .ff-model-btn-add:hover {
+        background: #1e293b;
+        border-color: #1e293b;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 14px rgba(15, 23, 42, 0.15);
+    }
+    .ff-app-group { margin-bottom: 2rem; }
+    .ff-app-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.85rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .ff-app-header h2 {
+        margin: 0 !important;
+        font-size: 0.95rem !important;
+        font-weight: 800 !important;
+        color: #0f172a !important;
+        background: transparent !important;
+        padding: 0 !important;
+        border: none !important;
+        letter-spacing: -0.01em;
+        text-transform: none !important;
+    }
+    .ff-app-header a {
+        color: #0f172a !important;
+        text-decoration: none !important;
+        font-size: 0.95rem;
+        font-weight: 800;
+    }
+    .ff-app-header a:hover { color: #059669 !important; }
+</style>
+
+{% if app_list %}
+    {% for app in app_list %}
+        <div class="ff-app-group app-{{ app.app_label }}">
+            <div class="ff-app-header">
+                <h2>
+                    {% if app.app_url %}<a href="{{ app.app_url }}">{{ app.name }}</a>{% else %}{{ app.name }}{% endif %}
+                </h2>
+            </div>
+
+            <div class="ff-model-grid">
+                {% for model in app.models %}
+                    <div class="ff-model-card">
+                        <div class="ff-model-head">
+                            <div class="ff-model-icon">
+                                {% if model.object_name == "User" %}👤
+                                {% elif model.object_name == "Group" %}👥
+                                {% elif model.object_name == "Transaction" %}💸
+                                {% elif model.object_name == "Category" %}🏷️
+                                {% elif model.object_name == "Budget" %}🎯
+                                {% elif model.object_name == "Currency" %}💱
+                                {% elif model.object_name == "UserCurrency" %}🌐
+                                {% else %}📄{% endif %}
+                            </div>
+                            <div style="min-width: 0; flex: 1;">
+                                {% if model.admin_url %}
+                                    <a class="ff-model-title" href="{{ model.admin_url }}">{{ model.name }}</a>
+                                {% else %}
+                                    <span class="ff-model-title">{{ model.name }}</span>
+                                {% endif %}
+                                <div class="ff-model-appname">{{ app.name }}</div>
+                            </div>
+                        </div>
+
+                        <div class="ff-model-actions">
+                            {% if model.admin_url %}
+                                <a class="ff-model-btn ff-model-btn-view" href="{{ model.admin_url }}">View all</a>
+                            {% endif %}
+                            {% if model.add_url %}
+                                <a class="ff-model-btn ff-model-btn-add" href="{{ model.add_url }}">＋ Add</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endfor %}
+{% else %}
+    <p style="color: #64748b; padding: 2rem; text-align: center;">You don't have permission to view anything.</p>
+{% endif %}

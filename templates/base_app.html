@@ -1,0 +1,251 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}FinanceFlow{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body class="app-layout">
+
+    <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Open menu">☰</button>
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <span class="brand-mark">F</span>
+            <span class="brand-text">FinanceFlow</span>
+        </div>
+
+        <div class="user-card">
+            <div class="user-avatar">{{ user.username|slice:":1"|upper }}</div>
+            <div class="user-info">
+                <div class="user-name">{{ user.username }}</div>
+                <div class="user-email">{{ user.email|default:"Member" }}</div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-group-label">Overview</div>
+            <a href="{% url 'finance:dashboard' %}" class="side-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                <span class="side-icon">📊</span> Dashboard
+            </a>
+            <a href="{% url 'finance:reports' %}" class="side-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}">
+                <span class="side-icon">📈</span> Reports
+            </a>
+
+            <div class="nav-group-label">Money</div>
+            <a href="{% url 'finance:transactions' %}" class="side-link {% if 'transaction' in request.resolver_match.url_name %}active{% endif %}">
+                <span class="side-icon">💸</span> Transactions
+            </a>
+            <a href="{% url 'finance:budgets' %}" class="side-link {% if 'budget' in request.resolver_match.url_name %}active{% endif %}">
+                <span class="side-icon">🎯</span> Budgets
+            </a>
+            <a href="{% url 'finance:categories' %}" class="side-link {% if 'categor' in request.resolver_match.url_name %}active{% endif %}">
+                <span class="side-icon">🏷️</span> Categories
+            </a>
+
+            <a href="{% url 'finance:currencies' %}" class="side-link {% if 'currenc' in request.resolver_match.url_name %}active{% endif %}">
+                <span class="side-icon">💱</span> Currencies
+            </a>
+
+            <div class="nav-group-label">Actions</div>
+            <a href="{% url 'finance:transaction_create' %}" class="side-link side-link-action">
+                <span class="side-icon">＋</span> Add transaction
+            </a>
+            <a href="{% url 'finance:transaction_export' %}" class="side-link">
+                <span class="side-icon">📥</span> Export CSV
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <button type="button" class="side-link side-link-logout" id="logoutTrigger" style="width:100%; background:transparent; border:none; font:inherit; cursor:pointer; text-align:left;">
+                <span class="side-icon">🚪</span> Log out
+            </button>
+        </div>
+    </aside>
+
+    <main class="app-main">
+        {% if messages %}
+            <div class="messages-container">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        // Mobile sidebar toggle
+        const menuBtn = document.getElementById('mobileMenuBtn');
+        const overlay = document.getElementById('mobileOverlay');
+        const sidebar = document.getElementById('sidebar');
+        function toggleSidebar() {
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('show');
+        }
+        if (menuBtn) menuBtn.addEventListener('click', toggleSidebar);
+        if (overlay) overlay.addEventListener('click', toggleSidebar);
+    </script>
+
+
+    <!-- LOGOUT MODAL -->
+    <div class="logout-modal" id="logoutModal" aria-hidden="true">
+        <div class="logout-modal-overlay" data-close-logout></div>
+        <div class="logout-modal-card" role="dialog" aria-modal="true" aria-labelledby="logoutTitle">
+            <div class="logout-modal-icon">🚪</div>
+            <h3 id="logoutTitle">Log out of FinanceFlow?</h3>
+            <p>You'll need to sign in again to access your dashboard.</p>
+            <div class="logout-modal-actions">
+                <button type="button" class="logout-btn-cancel" data-close-logout>Cancel</button>
+                <form method="post" action="{% url 'accounts:logout' %}" style="margin:0;">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-btn-confirm">Yes, log out</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .logout-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 300;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1.25rem;
+        }
+        .logout-modal.open {
+            display: flex;
+            animation: logoutFadeIn 0.2s ease-out;
+        }
+        @keyframes logoutFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .logout-modal-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(4px);
+        }
+        .logout-modal-card {
+            position: relative;
+            background: #fff;
+            border-radius: 20px;
+            padding: 2rem 1.75rem 1.5rem;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 30px 60px -20px rgba(15, 23, 42, 0.3);
+            animation: logoutCardIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes logoutCardIn {
+            from { opacity: 0; transform: scale(0.95) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .logout-modal-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 18px;
+            background: linear-gradient(135deg, #fff1f2, #ffe4e6);
+            color: #e11d48;
+            display: grid;
+            place-items: center;
+            font-size: 1.75rem;
+            margin: 0 auto 1.15rem;
+        }
+        .logout-modal-card h3 {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.5rem;
+        }
+        .logout-modal-card p {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: #64748b;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+        }
+        .logout-modal-actions {
+            display: flex;
+            gap: 0.6rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .logout-btn-cancel,
+        .logout-btn-confirm {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            padding: 0.75rem 1.35rem;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: 1.5px solid transparent;
+            transition: all 0.15s;
+            letter-spacing: -0.005em;
+        }
+        .logout-btn-cancel {
+            background: #f1f5f9;
+            color: #0f172a;
+            border-color: #e2e8f0;
+        }
+        .logout-btn-cancel:hover {
+            background: #e2e8f0;
+            border-color: #cbd5e1;
+        }
+        .logout-btn-confirm {
+            background: #e11d48;
+            color: #fff;
+            box-shadow: 0 6px 16px rgba(225, 29, 72, 0.25);
+        }
+        .logout-btn-confirm:hover {
+            background: #be123c;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 24px rgba(225, 29, 72, 0.35);
+        }
+    </style>
+
+    <script>
+        (function () {
+            var trigger = document.getElementById('logoutTrigger');
+            var modal = document.getElementById('logoutModal');
+            if (!trigger || !modal) return;
+
+            function open() {
+                modal.classList.add('open');
+                modal.setAttribute('aria-hidden', 'false');
+                document.body.style.overflow = 'hidden';
+            }
+            function close() {
+                modal.classList.remove('open');
+                modal.setAttribute('aria-hidden', 'true');
+                document.body.style.overflow = '';
+            }
+
+            trigger.addEventListener('click', open);
+            modal.querySelectorAll('[data-close-logout]').forEach(function (el) {
+                el.addEventListener('click', close);
+            });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && modal.classList.contains('open')) close();
+            });
+        })();
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

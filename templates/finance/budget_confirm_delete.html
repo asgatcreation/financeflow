@@ -1,0 +1,16 @@
+{% extends "base_app.html" %}
+{% block title %}Delete Budget · FinanceFlow{% endblock %}
+
+{% block content %}
+<div class="app-content-narrow">
+    <div class="form-card danger-card">
+        <h1>Delete budget?</h1>
+        <p>Delete budget for <strong>{{ object.category.name }}</strong> ({{ object.month }}/{{ object.year }})?</p>
+        <form method="post" class="form-actions">
+            {% csrf_token %}
+            <a href="{% url 'finance:budgets' %}" class="btn btn-ghost">Cancel</a>
+            <button type="submit" class="btn btn-danger">Yes, delete</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

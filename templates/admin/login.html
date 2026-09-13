@@ -1,0 +1,334 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin · FinanceFlow</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body { height: 100%; }
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+            display: flex;
+            background: #f8fafc;
+            color: #0f172a;
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+        }
+
+        /* ─── LEFT: brand side ──────────────────── */
+        .brand-panel {
+            flex: 1.1;
+            background:
+                radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.12), transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(14, 165, 233, 0.3), transparent 55%),
+                linear-gradient(160deg, #064e3b 0%, #065f46 45%, #0e7490 100%);
+            color: #fff;
+            padding: 4rem 3.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+        .brand-panel::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image:
+                radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.08) 1px, transparent 0);
+            background-size: 32px 32px;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .brand-panel > * { position: relative; z-index: 1; }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            font-weight: 800;
+            font-size: 1.25rem;
+            letter-spacing: -0.02em;
+        }
+        .brand-logo-mark {
+            width: 40px; height: 40px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            display: grid; place-items: center;
+            font-weight: 800; font-size: 1.15rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .brand-content { max-width: 480px; }
+        .brand-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.4rem 0.85rem;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 999px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-bottom: 1.75rem;
+        }
+        .brand-content h1 {
+            font-size: clamp(2rem, 3.5vw, 2.75rem);
+            font-weight: 800;
+            line-height: 1.1;
+            letter-spacing: -0.03em;
+            margin-bottom: 1rem;
+        }
+        .brand-content h1 span { color: #5eead4; }
+        .brand-content p {
+            font-size: 1rem;
+            line-height: 1.65;
+            color: rgba(255, 255, 255, 0.75);
+            margin-bottom: 2rem;
+        }
+
+        .brand-features {
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+        }
+        .brand-feature {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.85);
+            font-weight: 500;
+        }
+        .brand-feature-icon {
+            width: 28px; height: 28px;
+            border-radius: 8px;
+            background: rgba(94, 234, 212, 0.15);
+            border: 1px solid rgba(94, 234, 212, 0.3);
+            color: #5eead4;
+            display: grid; place-items: center;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+
+        .brand-footer {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.55);
+            letter-spacing: 0.02em;
+        }
+
+        /* ─── RIGHT: form side ──────────────────── */
+        .form-panel {
+            flex: 1;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem 2rem;
+        }
+        .form-inner {
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .form-header { margin-bottom: 2.5rem; }
+        .form-header h2 {
+            font-size: 1.75rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            margin-bottom: 0.5rem;
+        }
+        .form-header p {
+            color: #64748b;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .form-alert {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #b91c1c;
+            padding: 0.85rem 1rem;
+            border-radius: 12px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .field-group { margin-bottom: 1.35rem; }
+        .field-group label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 0.55rem;
+            letter-spacing: -0.005em;
+        }
+        .field-group input[type="text"],
+        .field-group input[type="password"] {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            background: #fff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #0f172a;
+            transition: all 0.15s;
+        }
+        .field-group input::placeholder { color: #94a3b8; }
+        .field-group input:focus {
+            outline: none;
+            border-color: #10b981;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 0.95rem 1.5rem;
+            background: #0f172a;
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-top: 0.75rem;
+            letter-spacing: -0.005em;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .submit-btn:hover {
+            background: #1e293b;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.2);
+        }
+        .submit-btn:active { transform: translateY(0); }
+
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 1.75rem;
+            color: #64748b;
+            font-size: 0.88rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: color 0.15s;
+        }
+        .back-link:hover { color: #10b981; }
+
+        /* ─── Responsive ───────────────────────── */
+        @media (max-width: 900px) {
+            body { flex-direction: column; }
+            .brand-panel { flex: none; padding: 2.5rem 2rem; min-height: 260px; }
+            .brand-content { margin-top: 1.5rem; }
+            .brand-content h1 { font-size: 1.65rem; }
+            .brand-features { display: none; }
+            .brand-footer { display: none; }
+            .form-panel { padding: 2.5rem 1.5rem; }
+        }
+        @media (max-width: 480px) {
+            .brand-panel { padding: 2rem 1.5rem; min-height: 200px; }
+            .brand-content p { font-size: 0.88rem; }
+            .brand-content h1 { font-size: 1.35rem; margin-bottom: 0.5rem; }
+            .brand-badge { margin-bottom: 1rem; font-size: 0.65rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- LEFT: Brand -->
+    <div class="brand-panel">
+        <div class="brand-logo">
+            <div class="brand-logo-mark">F</div>
+            <span>FinanceFlow</span>
+        </div>
+
+        <div class="brand-content">
+            <span class="brand-badge">🛡️ Admin Console</span>
+            <h1>Manage your <span>entire finance</span> platform.</h1>
+            <p>Users, transactions, budgets, categories, and currencies — all in one clean, powerful control center.</p>
+
+            <div class="brand-features">
+                <div class="brand-feature">
+                    <span class="brand-feature-icon">✓</span>
+                    <span>Full user management</span>
+                </div>
+                <div class="brand-feature">
+                    <span class="brand-feature-icon">✓</span>
+                    <span>Audit all transactions</span>
+                </div>
+                <div class="brand-feature">
+                    <span class="brand-feature-icon">✓</span>
+                    <span>Multi-currency support</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="brand-footer">
+            © {% now "Y" %} FinanceFlow · Secure Admin
+        </div>
+    </div>
+
+    <!-- RIGHT: Form -->
+    <div class="form-panel">
+        <div class="form-inner">
+            <div class="form-header">
+                <h2>Welcome back</h2>
+                <p>Sign in to access the admin console.</p>
+            </div>
+
+            {% if form.non_field_errors %}
+                <div class="form-alert">
+                    <span>⚠️</span>
+                    <span>Invalid username or password.</span>
+                </div>
+            {% endif %}
+
+            <form action="{{ app_path }}" method="post" id="login-form">
+                {% csrf_token %}
+
+                <div class="field-group">
+                    <label for="id_username">Username</label>
+                    <input type="text" name="username" autocomplete="username" autofocus
+                           required id="id_username" placeholder="Enter your username">
+                </div>
+
+                <div class="field-group">
+                    <label for="id_password">Password</label>
+                    <input type="password" name="password" autocomplete="current-password"
+                           required id="id_password" placeholder="Enter your password">
+                </div>
+
+                <input type="hidden" name="next" value="{{ next }}">
+
+                <button type="submit" class="submit-btn">
+                    Sign in <span>→</span>
+                </button>
+            </form>
+
+            <a href="/" class="back-link">← Back to FinanceFlow</a>
+        </div>
+    </div>
+
+</body>
+</html>

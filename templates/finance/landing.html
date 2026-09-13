@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+{% block title %}FinanceFlow — Multi-currency finance, done right{% endblock %}
+
+{% block content %}
+
+<!-- ═══ HERO — DARK ═══ -->
+<section class="nx-hero">
+    <div class="nx-hero-bg"></div>
+    <div class="nx-hero-inner">
+        <div class="nx-hero-text">
+            <span class="nx-pill">
+                <span class="nx-pill-dot"></span>
+                Now with multi-currency support
+            </span>
+            <h1 class="nx-title">
+                Your money.<br>
+                <span class="nx-title-grad">All of it. In one place.</span>
+            </h1>
+            <p class="nx-lead">
+                Track Naira, Dollar, Euro — up to 5 currencies at once.
+                Budgets, charts, and clarity without the conversion headache.
+            </p>
+            <div class="nx-cta">
+                {% if user.is_authenticated %}
+                    <a href="{% url 'finance:dashboard' %}" class="nx-btn nx-btn-primary">Open dashboard →</a>
+                    <a href="{% url 'finance:transaction_create' %}" class="nx-btn nx-btn-ghost">+ Add transaction</a>
+                {% else %}
+                    <a href="{% url 'accounts:register' %}" class="nx-btn nx-btn-primary">Start free — 30 seconds</a>
+                    <a href="#features" class="nx-btn nx-btn-ghost">Explore ↓</a>
+                {% endif %}
+            </div>
+            <div class="nx-stats">
+                <div class="nx-stat">
+                    <span class="nx-stat-value">5</span>
+                    <span class="nx-stat-label">Currencies</span>
+                </div>
+                <div class="nx-stat">
+                    <span class="nx-stat-value">15+</span>
+                    <span class="nx-stat-label">Categories</span>
+                </div>
+                <div class="nx-stat">
+                    <span class="nx-stat-value">∞</span>
+                    <span class="nx-stat-label">Transactions</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="nx-hero-visual">
+            <div class="nx-orbit">
+                <div class="nx-orbit-ring nx-orbit-ring-1"></div>
+                <div class="nx-orbit-ring nx-orbit-ring-2"></div>
+                <div class="nx-orbit-ring nx-orbit-ring-3"></div>
+                <div class="nx-orbit-core">
+                    <div class="nx-orbit-symbol">₦</div>
+                </div>
+                <div class="nx-orbit-item nx-orbit-1">$</div>
+                <div class="nx-orbit-item nx-orbit-2">€</div>
+                <div class="nx-orbit-item nx-orbit-3">£</div>
+                <div class="nx-orbit-item nx-orbit-4">¥</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Currency marquee -->
+    <div class="nx-marquee">
+        <div class="nx-marquee-track">
+            <span>🇳🇬 NGN</span><span>·</span>
+            <span>🇺🇸 USD</span><span>·</span>
+            <span>🇪🇺 EUR</span><span>·</span>
+            <span>🇬🇧 GBP</span><span>·</span>
+            <span>🇯🇵 JPY</span><span>·</span>
+            <span>🇨🇦 CAD</span><span>·</span>
+            <span>🇦🇺 AUD</span><span>·</span>
+            <span>🇮🇳 INR</span><span>·</span>
+            <span>🇿🇦 ZAR</span><span>·</span>
+            <span>🇬🇭 GHS</span><span>·</span>
+            <span>🇰🇪 KES</span><span>·</span>
+            <span>🇦🇪 AED</span><span>·</span>
+            <span>🇨🇭 CHF</span><span>·</span>
+            <span>🇸🇬 SGD</span><span>·</span>
+            <span>🇰🇷 KRW</span><span>·</span>
+            <span>🇳🇬 NGN</span><span>·</span>
+            <span>🇺🇸 USD</span><span>·</span>
+            <span>🇪🇺 EUR</span><span>·</span>
+            <span>🇬🇧 GBP</span><span>·</span>
+            <span>🇯🇵 JPY</span>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ BENTO GRID — FEATURES ═══ -->
+<section id="features" class="nx-bento-section">
+    <div class="nx-bento-head">
+        <span class="nx-eyebrow">Everything included</span>
+        <h2>Built like a real product.</h2>
+        <p>No upsells. No premium tier. Everything below is free, forever.</p>
+    </div>
+
+    <div class="nx-bento">
+        <!-- Big tile: Dashboard preview -->
+        <div class="nx-tile nx-tile-lg nx-tile-dash">
+            <div class="nx-tile-head">
+                <span class="nx-tile-icon">📊</span>
+                <div>
+                    <h3>Live dashboard</h3>
+                    <p>Balance updates the second you add a transaction.</p>
+                </div>
+            </div>
+            <div class="nx-dash-mock">
+                <div class="nx-dash-row">
+                    <span class="nx-dash-flag">🇳🇬</span>
+                    <div>
+                        <div class="nx-dash-code">NGN · Primary</div>
+                        <div class="nx-dash-value">₦2,847,500.00</div>
+                    </div>
+                    <span class="nx-dash-badge up">+12.4%</span>
+                </div>
+                <div class="nx-dash-row">
+                    <span class="nx-dash-flag">🇺🇸</span>
+                    <div>
+                        <div class="nx-dash-code">USD</div>
+                        <div class="nx-dash-value">$4,320.50</div>
+                    </div>
+                    <span class="nx-dash-badge down">−3.1%</span>
+                </div>
+                <div class="nx-dash-bars">
+                    <div class="nx-dash-bar" style="height:45%"></div>
+                    <div class="nx-dash-bar" style="height:70%"></div>
+                    <div class="nx-dash-bar" style="height:35%"></div>
+                    <div class="nx-dash-bar" style="height:85%"></div>
+                    <div class="nx-dash-bar" style="height:60%"></div>
+                    <div class="nx-dash-bar" style="height:78%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tile: Multi-currency -->
+        <div class="nx-tile nx-tile-currency">
+            <span class="nx-tile-icon">💱</span>
+            <h3>5 currencies</h3>
+            <p>Run Naira and Dollar side by side. No messy conversions.</p>
+            <div class="nx-chips">
+                <span class="nx-chip">🇳🇬 NGN</span>
+                <span class="nx-chip">🇺🇸 USD</span>
+                <span class="nx-chip">🇪🇺 EUR</span>
+                <span class="nx-chip nx-chip-ghost">+2 more</span>
+            </div>
+        </div>
+
+        <!-- Tile: Charts -->
+        <div class="nx-tile nx-tile-charts">
+            <span class="nx-tile-icon">📈</span>
+            <h3>Smart charts</h3>
+            <p>Six-month trends. Category breakdowns. All interactive.</p>
+            <div class="nx-sparkline">
+                <svg viewBox="0 0 200 60" preserveAspectRatio="none">
+                    <polyline points="0,45 30,35 60,40 90,20 120,25 150,10 180,15 200,5"
+                              fill="none" stroke="#10b981" stroke-width="2.5"/>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Tile: Budgets -->
+        <div class="nx-tile nx-tile-budgets">
+            <span class="nx-tile-icon">🎯</span>
+            <h3>Budgets that warn you</h3>
+            <div class="nx-budget-row">
+                <span>🛒 Groceries</span>
+                <span class="nx-budget-pct">72%</span>
+            </div>
+            <div class="nx-bar"><div class="nx-bar-fill" style="width:72%;background:#10b981"></div></div>
+            <div class="nx-budget-row">
+                <span>🍽️ Dining</span>
+                <span class="nx-budget-pct warn">94%</span>
+            </div>
+            <div class="nx-bar"><div class="nx-bar-fill" style="width:94%;background:#f59e0b"></div></div>
+        </div>
+
+        <!-- Tile: Categories -->
+        <div class="nx-tile nx-tile-cats">
+            <span class="nx-tile-icon">🏷️</span>
+            <h3>15 pre-loaded categories</h3>
+            <p>Plus make your own — every one with an icon and color.</p>
+            <div class="nx-cat-icons">
+                <span>🛒</span><span>🏠</span><span>🚗</span><span>🍽️</span>
+                <span>💡</span><span>💊</span><span>🎬</span><span>📚</span>
+                <span>💰</span><span>🎁</span><span>💻</span><span>✈️</span>
+            </div>
+        </div>
+
+        <!-- Tile: CSV export -->
+        <div class="nx-tile nx-tile-export">
+            <span class="nx-tile-icon">📥</span>
+            <h3>CSV export</h3>
+            <p>Your data, always yours. One click away.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ SPLIT HOW-IT-WORKS ═══ -->
+<section class="nx-how">
+    <div class="nx-how-inner">
+        <div class="nx-how-text">
+            <span class="nx-eyebrow">Under 30 seconds</span>
+            <h2>From signup to insights.</h2>
+            <div class="nx-how-steps">
+                <div class="nx-how-step">
+                    <span class="nx-how-num">01</span>
+                    <div>
+                        <h3>Sign up free</h3>
+                        <p>Email or Google — takes seconds.</p>
+                    </div>
+                </div>
+                <div class="nx-how-step">
+                    <span class="nx-how-num">02</span>
+                    <div>
+                        <h3>Pick currencies</h3>
+                        <p>Naira by default. Add more anytime.</p>
+                    </div>
+                </div>
+                <div class="nx-how-step">
+                    <span class="nx-how-num">03</span>
+                    <div>
+                        <h3>Log transactions</h3>
+                        <p>Each one in its own currency.</p>
+                    </div>
+                </div>
+                <div class="nx-how-step">
+                    <span class="nx-how-num">04</span>
+                    <div>
+                        <h3>Watch patterns emerge</h3>
+                        <p>Charts and budgets do the rest.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="nx-how-visual">
+            <div class="nx-phone">
+                <div class="nx-phone-notch"></div>
+                <div class="nx-phone-screen">
+                    <div class="nx-phone-hdr">
+                        <span class="nx-phone-flag">🇳🇬</span>
+                        <div>
+                            <div class="nx-phone-label">Naira balance</div>
+                            <div class="nx-phone-balance">₦2,847,500</div>
+                        </div>
+                    </div>
+                    <div class="nx-phone-tx pos">
+                        <span>💰 Salary</span><span>+₦450,000</span>
+                    </div>
+                    <div class="nx-phone-tx neg">
+                        <span>🛒 Groceries</span><span>−₦12,400</span>
+                    </div>
+                    <div class="nx-phone-tx neg">
+                        <span>🚗 Fuel</span><span>−₦8,200</span>
+                    </div>
+                    <div class="nx-phone-tx pos">
+                        <span>💻 Freelance</span><span>+₦180,000</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ FINAL CTA ═══ -->
+<section class="nx-final">
+    <div class="nx-final-inner">
+        <h2>Ready to see your money clearly?</h2>
+        <p>Free forever. Google sign-in. No credit card.</p>
+        {% if user.is_authenticated %}
+            <a href="{% url 'finance:dashboard' %}" class="nx-btn nx-btn-primary">Go to dashboard →</a>
+        {% else %}
+            <a href="{% url 'accounts:register' %}" class="nx-btn nx-btn-primary">Create free account →</a>
+        {% endif %}
+    </div>
+</section>
+
+{% endblock %}

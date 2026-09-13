@@ -1,0 +1,119 @@
+{% extends "base_app.html" %}
+{% block title %}Reports · FinanceFlow{% endblock %}
+
+{% block content %}
+<div class="app-content">
+    <header class="page-header">
+        <div>
+            <h1>Reports</h1>
+            <p class="subtitle">Trends and breakdowns across all your data.</p>
+        </div>
+    </header>
+
+    <section class="charts-grid">
+        <div class="panel panel-chart">
+            <div class="panel-header">
+                <h2>📈 12-month trend</h2>
+                <span class="panel-hint">Income vs Expense</span>
+            </div>
+            <div class="chart-wrap">
+                <canvas id="yearChart"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <section class="charts-grid">
+        <div class="panel panel-chart">
+            <div class="panel-header">
+                <h2>🥧 Expenses by category · {{ now_month }}</h2>
+            </div>
+            <div class="chart-wrap">
+                <canvas id="expCatChart"></canvas>
+            </div>
+        </div>
+        <div class="panel panel-chart">
+            <div class="panel-header">
+                <h2>💰 Income by category · {{ now_month }}</h2>
+            </div>
+            <div class="chart-wrap">
+                <canvas id="incCatChart"></canvas>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    Chart.defaults.color = '#94a3b8';
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.font.weight = '500';
+
+    // 12-month trend
+    new Chart(document.getElementById('yearChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ chart_labels|safe }},
+            datasets: [
+                {
+                    label: 'Income',
+                    data: {{ chart_income|safe }},
+                    backgroundColor: 'rgba(16,185,129,0.75)',
+                    borderRadius: 6,
+                },
+                {
+                    label: 'Expense',
+                    data: {{ chart_expense|safe }},
+                    backgroundColor: 'rgba(239,68,68,0.75)',
+                    borderRadius: 6,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top', labels: { boxWidth: 12, padding: 16 } },
+                tooltip: { backgroundColor: '#1e293b', borderColor: '#334155', borderWidth: 1,
+                    callbacks: { label: c => `${c.dataset.label}: $${c.parsed.y.toFixed(2)}` } }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: { grid: { color: 'rgba(148,163,184,0.08)' }, ticks: { callback: v => '$' + v } }
+            }
+        }
+    });
+
+    // Expense categories
+    const expData = {{ cat_data|safe }};
+    if (expData.length) {
+        new Chart(document.getElementById('expCatChart'), {
+            type: 'doughnut',
+            data: {
+                labels: {{ cat_labels|safe }},
+                datasets: [{ data: expData, backgroundColor: {{ cat_colors|safe }}, borderColor: '#1e293b', borderWidth: 3 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '65%',
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10 } } } }
+        });
+    } else {
+        document.getElementById('expCatChart').parentElement.innerHTML = '<p class="empty" style="padding:3rem 0;text-align:center;">No expenses this month.</p>';
+    }
+
+    // Income categories
+    const incData = {{ inc_data|safe }};
+    if (incData.length) {
+        new Chart(document.getElementById('incCatChart'), {
+            type: 'doughnut',
+            data: {
+                labels: {{ inc_labels|safe }},
+                datasets: [{ data: incData, backgroundColor: {{ inc_colors|safe }}, borderColor: '#1e293b', borderWidth: 3 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '65%',
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10 } } } }
+        });
+    } else {
+        document.getElementById('incCatChart').parentElement.innerHTML = '<p class="empty" style="padding:3rem 0;text-align:center;">No income this month.</p>';
+    }
+</script>
+{% endblock %}

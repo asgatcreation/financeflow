@@ -1,0 +1,114 @@
+{% extends "base_app.html" %}
+{% block title %}Transactions · FinanceFlow{% endblock %}
+
+{% block content %}
+<div class="app-content">
+    <header class="page-header">
+        <div>
+            <h1>Transactions</h1>
+            <p class="subtitle">{{ page_obj.paginator.count }} entr{{ page_obj.paginator.count|pluralize:"y,ies" }}</p>
+        </div>
+        <div class="page-header-actions">
+            <a href="{% url 'finance:transaction_export' %}" class="btn btn-ghost">📥 Export CSV</a>
+            <a href="{% url 'finance:transaction_create' %}" class="btn btn-primary">+ Add transaction</a>
+        </div>
+    </header>
+
+    <!-- FILTERED TOTALS -->
+    <div class="filter-totals">
+        <div class="filter-total">
+            <span class="label">Income</span>
+            <span class="value pos">+${{ filtered_income|floatformat:2 }}</span>
+        </div>
+        <div class="filter-total">
+            <span class="label">Expense</span>
+            <span class="value neg">−${{ filtered_expense|floatformat:2 }}</span>
+        </div>
+        <div class="filter-total">
+            <span class="label">Net</span>
+            <span class="value">${{ filtered_income|add:"-"|floatformat:2 }}</span>
+        </div>
+    </div>
+
+    <form method="get" class="filter-bar filter-bar-lg">
+        <input type="text" name="q" placeholder="Search description..." value="{{ q }}" class="form-input">
+        <select name="type" class="form-input">
+            <option value="">All types</option>
+            <option value="income" {% if type == "income" %}selected{% endif %}>Income</option>
+            <option value="expense" {% if type == "expense" %}selected{% endif %}>Expense</option>
+        </select>
+        <select name="category" class="form-input">
+            <option value="">All categories</option>
+            {% for c in categories %}
+                <option value="{{ c.pk }}" {% if category_id == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.icon }} {{ c.name }}</option>
+            {% endfor %}
+        </select>
+        <input type="date" name="start" value="{{ start }}" class="form-input" placeholder="From">
+        <input type="date" name="end" value="{{ end }}" class="form-input" placeholder="To">
+        <button type="submit" class="btn btn-secondary">Filter</button>
+        {% if q or type or category_id or start or end %}
+            <a href="{% url 'finance:transactions' %}" class="btn btn-ghost">Clear</a>
+        {% endif %}
+    </form>
+
+    {% if transactions %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Category</th>
+                        <th class="text-right">Amount</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in transactions %}
+                        <tr>
+                            <td>{{ t.date|date:"M d, Y" }}</td>
+                            <td>
+                                <div class="cell-title">{{ t.description }}</div>
+                                {% if t.notes %}<div class="cell-sub">{{ t.notes|truncatewords:8 }}</div>{% endif %}
+                            </td>
+                            <td>
+                                <span class="pill" style="background:{{ t.category.color|default:'#6366f1' }}20; color:{{ t.category.color|default:'#6366f1' }}">
+                                    {{ t.category.icon|default:"💳" }} {{ t.category.name|default:"Uncategorized" }}
+                                </span>
+                            </td>
+                            <td class="text-right">
+                                <span class="{% if t.type == 'income' %}pos{% else %}neg{% endif %}">
+                                    {% if t.type == 'income' %}+{% else %}−{% endif %}${{ t.amount|floatformat:2 }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <a href="{% url 'finance:transaction_update' t.pk %}" class="icon-btn" title="Edit">✏️</a>
+                                <a href="{% url 'finance:transaction_delete' t.pk %}" class="icon-btn" title="Delete">🗑️</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if is_paginated %}
+            <div class="pagination">
+                {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if type %}&type={{ type }}{% endif %}{% if category_id %}&category={{ category_id }}{% endif %}{% if start %}&start={{ start }}{% endif %}{% if end %}&end={{ end }}{% endif %}" class="btn btn-ghost">← Previous</a>
+                {% endif %}
+                <span class="page-info">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if type %}&type={{ type }}{% endif %}{% if category_id %}&category={{ category_id }}{% endif %}{% if start %}&start={{ start }}{% endif %}{% if end %}&end={{ end }}{% endif %}" class="btn btn-ghost">Next →</a>
+                {% endif %}
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">💸</div>
+            <h2>No transactions found</h2>
+            <p>Try adjusting your filters or add a new transaction.</p>
+            <a href="{% url 'finance:transaction_create' %}" class="btn btn-primary">+ Add transaction</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

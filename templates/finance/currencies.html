@@ -1,0 +1,89 @@
+{% extends "base_app.html" %}
+{% block title %}Currencies · FinanceFlow{% endblock %}
+
+{% block content %}
+<div class="app-content">
+    <header class="page-header">
+        <div>
+            <h1>Currencies</h1>
+            <p class="subtitle">Track up to {{ max_currencies }} currencies simultaneously · {{ user_currencies|length }}/{{ max_currencies }} used</p>
+        </div>
+    </header>
+
+    <div class="two-col-grid">
+        <!-- Current currencies -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2>💱 Your wallet</h2>
+            </div>
+
+            {% if user_currencies %}
+                <ul class="currency-list">
+                    {% for uc in user_currencies %}
+                        <li class="currency-row {% if uc.is_primary %}primary{% endif %}">
+                            <div class="currency-flag">{{ uc.currency.flag }}</div>
+                            <div class="currency-info">
+                                <div class="currency-code">
+                                    {{ uc.currency.code }}
+                                    {% if uc.is_primary %}<span class="tag-primary">Primary</span>{% endif %}
+                                </div>
+                                <div class="currency-name">{{ uc.currency.name }} · {{ uc.currency.symbol }}</div>
+                            </div>
+                            <div class="currency-actions">
+                                {% if not uc.is_primary %}
+                                    <form method="post" action="{% url 'finance:currency_primary' uc.pk %}" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="icon-btn" title="Make primary">⭐</button>
+                                    </form>
+                                {% endif %}
+                                <form method="post" action="{% url 'finance:currency_remove' uc.pk %}" style="display:inline;"
+                                      onsubmit="return confirm('Remove {{ uc.currency.code }}?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="icon-btn" title="Remove">🗑️</button>
+                                </form>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="empty">No currencies yet. Add one below.</p>
+            {% endif %}
+        </div>
+
+        <!-- Add currency -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2>＋ Add a currency</h2>
+            </div>
+
+            {% if user_currencies|length >= max_currencies %}
+                <div class="info-banner">
+                    You've reached the limit of {{ max_currencies }} currencies.
+                    Remove one to add another.
+                </div>
+            {% else %}
+                <form method="post" class="task-form">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label>{{ form.currency.label }}</label>
+                        {{ form.currency }}
+                        {% if form.currency.errors %}<small class="error">{{ form.currency.errors.0 }}</small>{% endif %}
+                    </div>
+                    <div class="form-group form-check">
+                        {{ form.is_primary }}
+                        <label for="{{ form.is_primary.id_for_label }}">{{ form.is_primary.label }}</label>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Add currency</button>
+                    </div>
+                </form>
+            {% endif %}
+
+            <div class="info-tip">
+                <strong>💡 Tip:</strong> Each transaction is saved in its own currency.
+                The dashboard shows totals per currency — no conversion needed.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

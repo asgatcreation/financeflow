@@ -1,0 +1,255 @@
+{% extends "base_app.html" %}
+{% block title %}Dashboard · FinanceFlow{% endblock %}
+
+{% block content %}
+<div class="app-content">
+    <header class="page-header">
+        <div>
+            <h1>Hey, {{ user.username }} 👋</h1>
+            <p class="subtitle">{{ now_month }} · <a href="{% url 'finance:currencies' %}">Manage currencies</a></p>
+        </div>
+        <div class="page-header-actions">
+            <a href="{% url 'finance:transaction_create' %}" class="btn btn-primary">+ Add transaction</a>
+        </div>
+    </header>
+
+    <!-- KPI CARDS -->
+    {% if no_currencies %}
+    <div class="empty-state">
+        <div class="empty-icon">💱</div>
+        <h2>Add a currency to get started</h2>
+        <p>FinanceFlow tracks each currency separately. Add your first currency to begin.</p>
+        <a href="{% url 'finance:currencies' %}" class="btn btn-primary">Add currency</a>
+    </div>
+{% else %}
+    <section class="currency-grid">
+        {% for row in per_currency %}
+            <div class="currency-card {% if row.is_primary %}primary{% endif %}">
+                <div class="currency-card-head">
+                    <div class="currency-card-flag">{{ row.currency.flag }}</div>
+                    <div>
+                        <div class="currency-card-code">
+                            {{ row.currency.code }}
+                            {% if row.is_primary %}<span class="tag-primary" style="margin-left:0.5rem;">Primary</span>{% endif %}
+                        </div>
+                        <div class="currency-card-name">{{ row.currency.name }}</div>
+                    </div>
+                </div>
+                <div class="currency-card-balance">
+                    {{ row.currency.symbol }}{{ row.balance|floatformat:2 }}
+                </div>
+                <div class="currency-card-stats">
+                    <div class="currency-stat">
+                        <span class="currency-stat-label">Income (mo)</span>
+                        <span class="currency-stat-value pos">{{ row.currency.symbol }}{{ row.m_income|floatformat:2 }}</span>
+                    </div>
+                    <div class="currency-stat">
+                        <span class="currency-stat-label">Expense (mo)</span>
+                        <span class="currency-stat-value neg">{{ row.currency.symbol }}{{ row.m_expense|floatformat:2 }}</span>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </section>
+{% endif %}
+
+    
+    
+    <!-- CHARTS ROW -->
+    <section class="charts-grid">
+        <div class="panel panel-chart">
+            <div class="panel-header">
+                <h2>📈 Income vs Expense</h2>
+                <span class="panel-hint">Last 6 months</span>
+            </div>
+            <div class="chart-wrap">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+
+        <div class="panel panel-chart">
+            <div class="panel-header">
+                <h2>🥧 Spending by category</h2>
+                <span class="panel-hint">{{ now_month }}</span>
+            </div>
+            <div class="chart-wrap">
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <!-- BOTTOM ROW -->
+    <section class="dashboard-lower">
+        <div class="panel">
+            <div class="panel-header">
+                <h2>🕓 Recent transactions</h2>
+                <a href="{% url 'finance:transactions' %}" class="link">View all →</a>
+            </div>
+            {% if recent %}
+                <ul class="tx-list">
+                    {% for t in recent %}
+                        <li class="tx-row">
+                            <div class="tx-icon" style="background:{{ t.category.color|default:'#6366f1' }}20; color:{{ t.category.color|default:'#6366f1' }}">
+                                {{ t.category.icon|default:"💳" }}
+                            </div>
+                            <div class="tx-content">
+                                <div class="tx-title">{{ t.description }}</div>
+                                <div class="tx-meta">{{ t.category.name|default:"Uncategorized" }} · {{ t.date|date:"M d" }}</div>
+                            </div>
+                            <div class="tx-amount {% if t.type == 'income' %}pos{% else %}neg{% endif %}">
+                                {% if t.type == 'income' %}+{% else %}−{% endif %}${{ t.amount|floatformat:2 }}
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="empty">No transactions yet. <a href="{% url 'finance:transaction_create' %}">Add your first →</a></p>
+            {% endif %}
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <h2>🎯 Budgets · {{ now_month }}</h2>
+                <a href="{% url 'finance:budgets' %}" class="link">Manage →</a>
+            </div>
+            {% if budgets %}
+                <ul class="budget-list">
+                    {% for b in budgets %}
+                        <li class="budget-row">
+                            <div class="budget-head">
+                                <span>
+                                    <span class="budget-icon">{{ b.category.icon }}</span>
+                                    {{ b.category.name }}
+                                </span>
+                                <span class="budget-figures">
+                                    ${{ b.spent|floatformat:2 }} / ${{ b.amount|floatformat:2 }}
+                                </span>
+                            </div>
+                            <div class="progress-bar {% if b.is_over %}over{% elif b.is_warning %}warn{% endif %}">
+                                <div class="progress-fill" style="width:{{ b.percent_used }}%; background:{% if b.is_over %}var(--danger){% elif b.is_warning %}var(--warning){% else %}{{ b.category.color }}{% endif %}"></div>
+                            </div>
+                            <div class="budget-foot">
+                                {% if b.is_over %}
+                                    <span class="budget-status over">Over by ${{ b.remaining|floatformat:2|slice:"1:" }}</span>
+                                {% elif b.is_warning %}
+                                    <span class="budget-status warn">{{ b.percent_used }}% used — close to limit</span>
+                                {% else %}
+                                    <span class="budget-status">{{ b.percent_used }}% used · ${{ b.remaining|floatformat:2 }} left</span>
+                                {% endif %}
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="empty">No budgets set for this month. <a href="{% url 'finance:budget_create' %}">Create one →</a></p>
+            {% endif %}
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const labels = {{ chart_labels|safe }};
+    const incomeData = {{ chart_income|safe }};
+    const expenseData = {{ chart_expense|safe }};
+
+    Chart.defaults.color = '#94a3b8';
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.font.weight = '500';
+
+    // Trend chart
+    const trendCtx = document.getElementById('trendChart');
+    new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Income',
+                    data: incomeData,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16,185,129,0.15)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 3,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#10b981',
+                },
+                {
+                    label: 'Expense',
+                    data: expenseData,
+                    borderColor: '#ef4444',
+                    backgroundColor: 'rgba(239,68,68,0.15)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 3,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#ef4444',
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top', labels: { boxWidth: 12, padding: 16 } },
+                tooltip: {
+                    backgroundColor: '#1e293b',
+                    borderColor: '#334155',
+                    borderWidth: 1,
+                    padding: 12,
+                    callbacks: {
+                        label: ctx => `${ctx.dataset.label}: $${ctx.parsed.y.toFixed(2)}`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { color: 'rgba(148,163,184,0.08)' } },
+                y: {
+                    grid: { color: 'rgba(148,163,184,0.08)' },
+                    ticks: { callback: v => '$' + v }
+                }
+            }
+        }
+    });
+
+    // Category donut
+    const catLabels = {{ cat_labels|safe }};
+    const catData = {{ cat_data|safe }};
+    const catColors = {{ cat_colors|safe }};
+
+    const catCtx = document.getElementById('categoryChart');
+    if (catData.length) {
+        new Chart(catCtx, {
+            type: 'doughnut',
+            data: {
+                labels: catLabels,
+                datasets: [{
+                    data: catData,
+                    backgroundColor: catColors,
+                    borderColor: '#1e293b',
+                    borderWidth: 3,
+                    hoverOffset: 8,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 10, padding: 12, font: { size: 12 } } },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        borderColor: '#334155',
+                        borderWidth: 1,
+                        callbacks: { label: ctx => `${ctx.label}: $${ctx.parsed.toFixed(2)}` }
+                    }
+                }
+            }
+        });
+    } else {
+        catCtx.parentElement.innerHTML = '<p class="empty" style="padding:3rem 0;text-align:center;">No expenses this month yet.</p>';
+    }
+</script>
+{% endblock %}

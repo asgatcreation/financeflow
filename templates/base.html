@@ -1,0 +1,103 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}FinanceFlow{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
+</head>
+<body class="public-layout">
+
+    <nav class="public-nav">
+        <div class="public-nav-inner">
+            <a href="{% if user.is_authenticated %}{% url 'finance:dashboard' %}{% else %}{% url 'finance:landing' %}{% endif %}" class="public-brand">
+                <span class="brand-mark">F</span>
+                <span>FinanceFlow</span>
+            </a>
+            <div class="public-nav-links">
+                {% if user.is_authenticated %}
+                    <a href="{% url 'finance:dashboard' %}" class="nav-link">Dashboard</a>
+                    <button type="button" class="nav-link" id="logoutTrigger" style="background:transparent; border:none; font:inherit; cursor:pointer; padding:0;">Logout</button>
+                {% else %}
+                    <a href="#features" class="nav-link">Features</a>
+                    <a href="{% url 'accounts:login' %}" class="nav-link">Login</a>
+                    <a href="{% url 'accounts:register' %}" class="btn btn-primary btn-sm">Get started</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    {% if messages %}
+        <div class="messages-container">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <main class="public-main">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="public-footer">
+        <p>FinanceFlow · Built with Django · {{ now|date:"Y" }}</p>
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+
+{% if user.is_authenticated %}
+<div class="logout-modal" id="logoutModal" aria-hidden="true">
+    <div class="logout-modal-overlay" data-close-logout></div>
+    <div class="logout-modal-card" role="dialog" aria-modal="true">
+        <div class="logout-modal-icon">🚪</div>
+        <h3>Log out of FinanceFlow?</h3>
+        <p>You'll need to sign in again to access your dashboard.</p>
+        <div class="logout-modal-actions">
+            <button type="button" class="logout-btn-cancel" data-close-logout>Cancel</button>
+            <form method="post" action="{% url 'accounts:logout' %}" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit" class="logout-btn-confirm">Yes, log out</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .logout-modal { position: fixed; inset: 0; z-index: 300; display: none; align-items: center; justify-content: center; padding: 1.25rem; }
+    .logout-modal.open { display: flex; animation: lgfade 0.2s ease-out; }
+    @keyframes lgfade { from { opacity: 0; } to { opacity: 1; } }
+    .logout-modal-overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(4px); }
+    .logout-modal-card { position: relative; background: #fff; border-radius: 20px; padding: 2rem 1.75rem 1.5rem; max-width: 400px; width: 100%; text-align: center; box-shadow: 0 30px 60px -20px rgba(15, 23, 42, 0.3); animation: lgcard 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    @keyframes lgcard { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    .logout-modal-icon { width: 60px; height: 60px; border-radius: 18px; background: linear-gradient(135deg, #fff1f2, #ffe4e6); color: #e11d48; display: grid; place-items: center; font-size: 1.75rem; margin: 0 auto 1.15rem; }
+    .logout-modal-card h3 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.15rem; font-weight: 800; color: #0f172a; letter-spacing: -0.02em; margin-bottom: 0.5rem; }
+    .logout-modal-card p { font-family: 'Plus Jakarta Sans', sans-serif; color: #64748b; font-size: 0.9rem; line-height: 1.5; margin-bottom: 1.5rem; font-weight: 500; }
+    .logout-modal-actions { display: flex; gap: 0.6rem; justify-content: center; flex-wrap: wrap; }
+    .logout-btn-cancel, .logout-btn-confirm { font-family: 'Plus Jakarta Sans', sans-serif; padding: 0.75rem 1.35rem; border-radius: 12px; font-size: 0.9rem; font-weight: 700; cursor: pointer; border: 1.5px solid transparent; transition: all 0.15s; }
+    .logout-btn-cancel { background: #f1f5f9; color: #0f172a; border-color: #e2e8f0; }
+    .logout-btn-cancel:hover { background: #e2e8f0; border-color: #cbd5e1; }
+    .logout-btn-confirm { background: #e11d48; color: #fff; box-shadow: 0 6px 16px rgba(225, 29, 72, 0.25); }
+    .logout-btn-confirm:hover { background: #be123c; transform: translateY(-1px); }
+</style>
+
+<script>
+    (function () {
+        var trigger = document.getElementById('logoutTrigger');
+        var modal = document.getElementById('logoutModal');
+        if (!trigger || !modal) return;
+        function open() { modal.classList.add('open'); document.body.style.overflow = 'hidden'; }
+        function close() { modal.classList.remove('open'); document.body.style.overflow = ''; }
+        trigger.addEventListener('click', open);
+        modal.querySelectorAll('[data-close-logout]').forEach(function (el) { el.addEventListener('click', close); });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && modal.classList.contains('open')) close(); });
+    })();
+</script>
+{% endif %}
+
+</body>
+</html>

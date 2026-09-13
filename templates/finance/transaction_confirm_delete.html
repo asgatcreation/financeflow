@@ -1,0 +1,16 @@
+{% extends "base_app.html" %}
+{% block title %}Delete Transaction · FinanceFlow{% endblock %}
+
+{% block content %}
+<div class="app-content-narrow">
+    <div class="form-card danger-card">
+        <h1>Delete transaction?</h1>
+        <p>Are you sure you want to delete <strong>"{{ object.description }}"</strong> ({{ object.amount }})? This cannot be undone.</p>
+        <form method="post" class="form-actions">
+            {% csrf_token %}
+            <a href="{% url 'finance:transactions' %}" class="btn btn-ghost">Cancel</a>
+            <button type="submit" class="btn btn-danger">Yes, delete it</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,612 @@
+{% load socialaccount %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log in · FinanceFlow</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { min-height: 100%; }
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+            display: flex;
+            min-height: 100vh;
+            min-height: 100dvh;
+            background: #fff;
+            color: #0f172a;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Smooth fade-in on page load */
+        body { animation: authPageIn 0.35s ease-out; }
+        @keyframes authPageIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Smooth fade-out when navigating away */
+        body.auth-leaving { animation: authPageOut 0.25s ease-in forwards; }
+        @keyframes authPageOut {
+            from { opacity: 1; }
+            to   { opacity: 0; }
+        }
+
+
+
+        /* LEFT PANEL */
+        .auth-left {
+            flex: 1.05;
+            background: #0a0f1e;
+            color: #fff;
+            position: relative;
+            overflow: hidden;
+            padding: 3rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .auth-left::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 30% 30%, rgba(16, 185, 129, 0.35), transparent 50%),
+                radial-gradient(circle at 70% 70%, rgba(14, 165, 233, 0.25), transparent 50%);
+        }
+        .auth-left::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+            background-size: 48px 48px;
+            mask-image: radial-gradient(ellipse at center, black, transparent 75%);
+            -webkit-mask-image: radial-gradient(ellipse at center, black, transparent 75%);
+        }
+        .auth-left > * { position: relative; z-index: 1; }
+
+        .auth-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            font-weight: 800;
+            font-size: 1.15rem;
+            letter-spacing: -0.02em;
+        }
+        .auth-brand-mark {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #10b981, #34d399);
+            display: grid;
+            place-items: center;
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #fff;
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        /* Carousel */
+        .auth-carousel {
+            position: relative;
+            min-height: 320px;
+        }
+        .auth-slide {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            transition: opacity 0.8s ease, transform 0.8s ease;
+            transform: translateY(20px);
+        }
+        .auth-slide.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .auth-slide-num {
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: #5eead4;
+            margin-bottom: 1.25rem;
+        }
+        .auth-slide h2 {
+            font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+            font-weight: 800;
+            line-height: 1.1;
+            letter-spacing: -0.03em;
+            margin-bottom: 1rem;
+            color: #fff;
+        }
+        .auth-slide p {
+            font-size: 1rem;
+            line-height: 1.65;
+            color: rgba(255, 255, 255, 0.7);
+            max-width: 440px;
+            font-weight: 400;
+        }
+
+        /* Slide-specific visuals */
+        .auth-slide-visual {
+            margin-top: 2rem;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 1.25rem;
+            backdrop-filter: blur(20px);
+            max-width: 380px;
+        }
+        .auth-mini-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.88rem;
+            font-weight: 700;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .auth-mini-row:last-child { border-bottom: none; }
+        .auth-mini-row .pos { color: #5eead4; }
+        .auth-mini-row .neg { color: #fda4af; }
+
+        .auth-mini-flags {
+            display: flex;
+            gap: 0.6rem;
+            margin-bottom: 1rem;
+        }
+        .auth-mini-flag {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            display: grid;
+            place-items: center;
+            font-size: 1.35rem;
+        }
+
+        .auth-mini-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.4rem;
+        }
+        .auth-mini-bar > div {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #5eead4);
+            border-radius: 4px;
+            animation: fillup 2s ease-out;
+        }
+        @keyframes fillup { from { width: 0; } }
+
+        .auth-slide-budget-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-top: 0.85rem;
+        }
+
+        /* Dots */
+        .auth-dots {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 2rem;
+        }
+        .auth-dot {
+            width: 24px;
+            height: 4px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            transition: all 0.3s;
+        }
+        .auth-dot.active {
+            background: #10b981;
+            width: 40px;
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+        }
+
+        .auth-left-footer {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        /* RIGHT PANEL */
+        .auth-right {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem 2rem;
+            background: #fff;
+        }
+        .auth-form-wrap {
+            width: 100%;
+            max-width: 400px;
+        }
+        .auth-form-head {
+            margin-bottom: 2rem;
+        }
+        .auth-form-head h1 {
+            font-size: 1.85rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            margin-bottom: 0.5rem;
+            color: #0f172a;
+        }
+        .auth-form-head p {
+            color: #64748b;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .auth-alert {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #b91c1c;
+            padding: 0.85rem 1rem;
+            border-radius: 12px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .auth-field { margin-bottom: 1.15rem; }
+        .auth-field label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.005em;
+        }
+        .auth-field input {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            background: #fff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #0f172a;
+            transition: all 0.15s;
+        }
+        .auth-field input::placeholder { color: #94a3b8; }
+        .auth-field input:focus {
+            outline: none;
+            border-color: #10b981;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+        }
+
+        .auth-submit {
+            width: 100%;
+            padding: 0.95rem 1.5rem;
+            background: #0f172a;
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-top: 0.5rem;
+            letter-spacing: -0.005em;
+        }
+        .auth-submit:hover {
+            background: #1e293b;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.2);
+        }
+
+        .auth-or {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            margin: 1.5rem 0;
+            color: #94a3b8;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        .auth-or::before, .auth-or::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: #e2e8f0;
+        }
+
+        .auth-google {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.65rem;
+            width: 100%;
+            padding: 0.85rem 1.25rem;
+            background: #fff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #0f172a;
+            text-decoration: none;
+            transition: all 0.15s;
+        }
+        .auth-google:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+            color: #0f172a;
+        }
+
+        .auth-switch {
+            text-align: center;
+            margin-top: 1.75rem;
+            color: #64748b;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .auth-switch a {
+            color: #059669;
+            font-weight: 700;
+            text-decoration: none;
+        }
+        .auth-switch a:hover { color: #047857; text-decoration: underline; }
+
+        .auth-extras {
+            text-align: center;
+            margin-top: 0.75rem;
+            font-size: 0.85rem;
+        }
+        .auth-extras a {
+            color: #64748b;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .auth-extras a:hover { color: #0f172a; }
+
+        /* RESPONSIVE */
+        @media (max-width: 900px) {
+            body { flex-direction: column; }
+            .auth-left {
+                flex: none;
+                min-height: 340px;
+                padding: 2rem 1.75rem;
+            }
+            .auth-carousel { min-height: 240px; }
+            .auth-slide h2 { font-size: 1.6rem; }
+            .auth-slide p { font-size: 0.92rem; }
+            .auth-left-footer { display: none; }
+            .auth-right { padding: 2.5rem 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- LEFT: Rotating slides -->
+    <div class="auth-left">
+        <div class="auth-brand">
+            <div class="auth-brand-mark">F</div>
+            <span>FinanceFlow</span>
+        </div>
+
+        <div class="auth-carousel">
+            <!-- Slide 1 -->
+            <div class="auth-slide active">
+                <div class="auth-slide-num">01 — Track everything</div>
+                <h2>Every naira, dollar, and euro. All in one place.</h2>
+                <p>Multi-currency tracking without the headache. Each transaction stays in its own currency.</p>
+                <div class="auth-slide-visual">
+                    <div class="auth-mini-flags">
+                        <div class="auth-mini-flag">🇳🇬</div>
+                        <div class="auth-mini-flag">🇺🇸</div>
+                        <div class="auth-mini-flag">🇪🇺</div>
+                        <div class="auth-mini-flag">🇬🇧</div>
+                    </div>
+                    <div class="auth-mini-row">
+                        <span>Naira balance</span>
+                        <span class="pos">₦2,847,500</span>
+                    </div>
+                    <div class="auth-mini-row">
+                        <span>USD balance</span>
+                        <span class="pos">$4,320.50</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 2 -->
+            <div class="auth-slide">
+                <div class="auth-slide-num">02 — Budget smart</div>
+                <h2>Know before you overspend.</h2>
+                <p>Set budgets per category. Get visual warnings at 80% and 100% usage.</p>
+                <div class="auth-slide-visual">
+                    <div class="auth-slide-budget-row">
+                        <span>🛒 Groceries</span>
+                        <span style="color:#5eead4">72%</span>
+                    </div>
+                    <div class="auth-mini-bar"><div style="width:72%"></div></div>
+                    <div class="auth-slide-budget-row">
+                        <span>🍽️ Dining Out</span>
+                        <span style="color:#fcd34d">94%</span>
+                    </div>
+                    <div class="auth-mini-bar"><div style="width:94%;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div></div>
+                    <div class="auth-slide-budget-row">
+                        <span>🚗 Transport</span>
+                        <span style="color:#5eead4">41%</span>
+                    </div>
+                    <div class="auth-mini-bar"><div style="width:41%"></div></div>
+                </div>
+            </div>
+
+            <!-- Slide 3 -->
+            <div class="auth-slide">
+                <div class="auth-slide-num">03 — See the patterns</div>
+                <h2>Charts that actually make sense.</h2>
+                <p>Six-month income and expense trends. Category breakdowns. All interactive.</p>
+                <div class="auth-slide-visual">
+                    <div class="auth-mini-row">
+                        <span>💰 Salary</span>
+                        <span class="pos">+₦450,000</span>
+                    </div>
+                    <div class="auth-mini-row">
+                        <span>💻 Freelance</span>
+                        <span class="pos">+₦180,000</span>
+                    </div>
+                    <div class="auth-mini-row">
+                        <span>🛒 Groceries</span>
+                        <span class="neg">−₦42,400</span>
+                    </div>
+                    <div class="auth-mini-row">
+                        <span>🏠 Rent</span>
+                        <span class="neg">−₦150,000</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="auth-dots">
+                <button class="auth-dot active" data-slide="0" aria-label="Slide 1"></button>
+                <button class="auth-dot" data-slide="1" aria-label="Slide 2"></button>
+                <button class="auth-dot" data-slide="2" aria-label="Slide 3"></button>
+            </div>
+            <div class="auth-left-footer" style="margin-top: 1rem;">
+                © {% now "Y" %} FinanceFlow · Built for clarity
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT: Form -->
+    <div class="auth-right">
+        <div class="auth-form-wrap">
+            <div class="auth-form-head">
+                <h1>Welcome back</h1>
+                <p>Log in to your account.</p>
+            </div>
+
+            {% if form.non_field_errors %}
+                <div class="auth-alert">
+                    <span>⚠️</span>
+                    <span>Invalid username or password.</span>
+                </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'account_login' %}">
+                {% csrf_token %}
+
+                <div class="auth-field">
+                    <label for="id_login">Username or Email</label>
+                    <input type="text" name="login" id="id_login" autocomplete="username" autofocus required
+                           placeholder="you@example.com">
+                </div>
+
+                <div class="auth-field">
+                    <label for="id_password">Password</label>
+                    <input type="password" name="password" id="id_password" autocomplete="current-password" required
+                           placeholder="Your password">
+                </div>
+
+                {% if redirect_field_value %}
+                    <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
+                {% endif %}
+
+                <button type="submit" class="auth-submit">Sign in →</button>
+            </form>
+
+            <div class="auth-or"><span>or continue with</span></div>
+
+            <a href="{% provider_login_url 'google' %}" class="auth-google">
+                <svg width="20" height="20" viewBox="0 0 48 48">
+                    <path fill="#FFC107" d="M43.6 20.5h-1.9V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 20-8.9 20-20 0-1.2-.1-2.4-.4-3.5z"/>
+                    <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
+                    <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.2-7.9l-6.6 5.1C9.6 39.6 16.2 44 24 44z"/>
+                    <path fill="#1976D2" d="M43.6 20.5H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.6l6.2 5.2c-.4.4 6.6-4.8 6.6-15.3 0-1.2-.1-2.4-.4-3.5z"/>
+                </svg>
+                Continue with Google
+            </a>
+
+            <p class="auth-switch">
+                Don't have an account? <a href="{% url 'account_signup' %}">Create one →</a>
+            </p>
+            <p class="auth-extras">
+                <a href="{% url 'account_reset_password' %}">Forgot password?</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Carousel
+        const slides = document.querySelectorAll('.auth-slide');
+        const dots = document.querySelectorAll('.auth-dot');
+        let current = 0;
+        let timer;
+
+        function showSlide(i) {
+            slides.forEach((s, idx) => s.classList.toggle('active', idx === i));
+            dots.forEach((d, idx) => d.classList.toggle('active', idx === i));
+            current = i;
+        }
+
+        function nextSlide() {
+            showSlide((current + 1) % slides.length);
+        }
+
+        function startAuto() {
+            stopAuto();
+            timer = setInterval(nextSlide, 5500);
+        }
+
+        function stopAuto() {
+            if (timer) clearInterval(timer);
+        }
+
+        dots.forEach(dot => {
+            dot.addEventListener('click', () => {
+                showSlide(parseInt(dot.dataset.slide));
+                startAuto();
+            });
+        });
+
+        startAuto();
+    </script>
+
+    <script>
+        // Smooth transition when leaving the page (clicking a link)
+        document.querySelectorAll('a[href]:not([href^="#"]):not([target="_blank"])').forEach(function (link) {
+            link.addEventListener('click', function (e) {
+                var href = link.getAttribute('href');
+                if (!href || href.startsWith('javascript:')) return;
+                e.preventDefault();
+                document.body.classList.add('auth-leaving');
+                setTimeout(function () { window.location.href = href; }, 220);
+            });
+        });
+
+        // Also handle form submissions
+        document.querySelectorAll('form').forEach(function (form) {
+            form.addEventListener('submit', function () {
+                document.body.classList.add('auth-leaving');
+            });
+        });
+    </script>
+
+
+</body>
+</html>

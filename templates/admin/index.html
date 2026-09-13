@@ -1,0 +1,527 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+/* ═══════════════════════════════════════════════════════
+   ADMIN INDEX v3 — scoped under #content .admix-wrap
+   to defeat Django's #content h1/h2 selectors
+   ═══════════════════════════════════════════════════════ */
+#content .admix-wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+}
+
+/* ══ HERO ══ */
+#content .admix-hero {
+    background: linear-gradient(135deg, #064e3b 0%, #065f46 55%, #0e7490 100%);
+    border-radius: 20px;
+    padding: 2.25rem 2.5rem;
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    box-shadow: 0 20px 40px -15px rgba(6, 78, 59, 0.4);
+    position: relative;
+    overflow: hidden;
+}
+#content .admix-hero::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 340px;
+    height: 340px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(94, 234, 212, 0.3), transparent 70%);
+    pointer-events: none;
+}
+#content .admix-hero > * { position: relative; z-index: 1; }
+
+#content .admix-hero h1 {
+    color: #ffffff !important;
+    font-size: 1.7rem !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.025em !important;
+    margin: 0 0 0.5rem 0 !important;
+    padding: 0 !important;
+    line-height: 1.15 !important;
+}
+#content .admix-hero p {
+    color: rgba(255, 255, 255, 0.82) !important;
+    font-size: 0.95rem !important;
+    font-weight: 500 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1.5 !important;
+    max-width: 520px;
+}
+
+#content .admix-hero-actions {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+}
+#content .admix-hero-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.75rem 1.2rem;
+    border-radius: 12px;
+    font-size: 0.87rem;
+    font-weight: 700;
+    text-decoration: none !important;
+    transition: all 0.15s;
+    white-space: nowrap;
+    border: 1px solid transparent;
+    letter-spacing: -0.005em;
+}
+#content .admix-hero-btn-light {
+    background: #ffffff;
+    color: #065f46 !important;
+}
+#content .admix-hero-btn-light:hover {
+    background: #ecfdf5;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+}
+#content .admix-hero-btn-glass {
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.22);
+}
+#content .admix-hero-btn-glass:hover {
+    background: rgba(255, 255, 255, 0.24);
+    transform: translateY(-1px);
+}
+
+/* ══ QUICK ACTIONS ══ */
+#content .admix-quick {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.85rem;
+    margin-bottom: 2.5rem;
+}
+#content .admix-quick-tile {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 1rem 1.15rem;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    text-decoration: none !important;
+    color: #0f172a !important;
+    transition: all 0.18s;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+#content .admix-quick-tile:hover {
+    border-color: #10b981;
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px -10px rgba(16, 185, 129, 0.25);
+    color: #0f172a !important;
+}
+#content .admix-quick-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 11px;
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+    border: 1px solid rgba(16, 185, 129, 0.18);
+    display: grid;
+    place-items: center;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+    line-height: 1;
+}
+#content .admix-quick-text {
+    min-width: 0;
+    flex: 1;
+}
+#content .admix-quick-label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.01em;
+    margin-bottom: 0.1rem;
+}
+#content .admix-quick-desc {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #64748b;
+    line-height: 1.35;
+}
+
+/* ══ APP SECTIONS ══ */
+#content .admix-apps {
+    display: flex;
+    flex-direction: column;
+    gap: 2.25rem;
+    margin-bottom: 2.5rem;
+}
+#content .admix-app-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0 0 1rem 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 1.5px solid #e2e8f0;
+}
+#content .admix-app-header h2 {
+    margin: 0 !important;
+    font-size: 1rem !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    letter-spacing: -0.015em !important;
+    padding: 0 !important;
+    background: none !important;
+    border: none !important;
+    text-transform: none !important;
+}
+#content .admix-app-header h2 a {
+    color: #0f172a !important;
+    text-decoration: none !important;
+}
+#content .admix-app-header h2 a:hover { color: #059669 !important; }
+#content .admix-app-badge {
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    background: #ecfdf5;
+    color: #047857;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+/* ══ MODEL GRID ══ */
+#content .admix-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+}
+#content .admix-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.35rem 1.25rem 1.2rem;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    min-height: 165px;
+}
+#content .admix-card:hover {
+    border-color: #10b981;
+    transform: translateY(-3px);
+    box-shadow: 0 16px 32px -12px rgba(16, 185, 129, 0.22);
+}
+#content .admix-card-star {
+    border-color: #10b981;
+    background: linear-gradient(135deg, #ffffff, #f0fdf4);
+}
+#content .admix-card-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+}
+#content .admix-card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 13px;
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+    border: 1px solid rgba(16, 185, 129, 0.18);
+    display: grid;
+    place-items: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+    line-height: 1;
+}
+#content .admix-card-titles { min-width: 0; flex: 1; }
+#content .admix-card-title {
+    font-size: 0.98rem;
+    font-weight: 800;
+    color: #0f172a !important;
+    letter-spacing: -0.015em;
+    line-height: 1.25;
+    margin-bottom: 0.15rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+#content .admix-card-desc {
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 500;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+#content .admix-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: auto;
+    flex-wrap: wrap;
+}
+#content .admix-card-btn {
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 0.5rem 0.9rem;
+    border-radius: 10px;
+    text-decoration: none !important;
+    border: 1px solid transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    transition: all 0.15s;
+    cursor: pointer;
+    letter-spacing: -0.005em;
+}
+#content .admix-card-btn-view {
+    background: #f1f5f9;
+    color: #0f172a !important;
+    border-color: #e2e8f0;
+}
+#content .admix-card-btn-view:hover {
+    background: #e2e8f0;
+    border-color: #cbd5e1;
+}
+#content .admix-card-btn-add {
+    background: #0f172a;
+    color: #ffffff !important;
+}
+#content .admix-card-btn-add:hover {
+    background: #1e293b;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.18);
+}
+
+/* ══ RECENT ACTIVITY ══ */
+#content .admix-recent {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 1.5rem 1.5rem 1.25rem;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+#content .admix-recent h2 {
+    margin: 0 0 1rem 0 !important;
+    font-size: 0.82rem !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.1em !important;
+    color: #64748b !important;
+    padding: 0 0 0.85rem 0 !important;
+    background: none !important;
+    border: none !important;
+    border-bottom: 1.5px solid #e2e8f0 !important;
+    border-radius: 0 !important;
+}
+#content .admix-recent-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+#content .admix-recent-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.88rem;
+    color: #0f172a;
+    font-weight: 500;
+    line-height: 1.5;
+}
+#content .admix-recent-item:last-child { border-bottom: none; padding-bottom: 0; }
+#content .admix-recent-item::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #10b981;
+    flex-shrink: 0;
+    margin-top: 0.55rem;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+#content .admix-recent-item a {
+    color: #059669 !important;
+    font-weight: 700;
+    text-decoration: none;
+}
+#content .admix-recent-item a:hover { text-decoration: underline; }
+#content .admix-recent-empty {
+    padding: 0.5rem 0;
+    color: #94a3b8;
+    font-size: 0.88rem;
+    font-weight: 500;
+}
+
+@media (max-width: 640px) {
+    #content .admix-hero { padding: 1.5rem; }
+    #content .admix-hero h1 { font-size: 1.35rem !important; }
+    #content .admix-grid { grid-template-columns: 1fr; }
+    #content .admix-card { min-height: auto; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admix-wrap">
+
+    <!-- HERO -->
+    <div class="admix-hero">
+        <div>
+            <h1>Welcome back, {{ user.get_short_name|default:user.username }} 👋</h1>
+            <p>Manage every part of FinanceFlow — users, transactions, budgets, and system data.</p>
+        </div>
+        <div class="admix-hero-actions">
+            <a href="/" class="admix-hero-btn admix-hero-btn-glass">← Back to app</a>
+            <a href="/dashboard/" class="admix-hero-btn admix-hero-btn-light">Open dashboard →</a>
+        </div>
+    </div>
+
+    <!-- QUICK ACTIONS -->
+    <div class="admix-quick">
+        <a href="/admin/auth/user/add/" class="admix-quick-tile">
+            <div class="admix-quick-icon">👤</div>
+            <div class="admix-quick-text">
+                <span class="admix-quick-label">Add user</span>
+                <span class="admix-quick-desc">Create a new account</span>
+            </div>
+        </a>
+        <a href="/admin/finance/transaction/" class="admix-quick-tile">
+            <div class="admix-quick-icon">💸</div>
+            <div class="admix-quick-text">
+                <span class="admix-quick-label">Transactions</span>
+                <span class="admix-quick-desc">View and edit all entries</span>
+            </div>
+        </a>
+        <a href="/admin/socialaccount/socialapp/" class="admix-quick-tile">
+            <div class="admix-quick-icon">🔑</div>
+            <div class="admix-quick-text">
+                <span class="admix-quick-label">Social applications</span>
+                <span class="admix-quick-desc">Configure Google login here</span>
+            </div>
+        </a>
+        <a href="/admin/finance/currency/" class="admix-quick-tile">
+            <div class="admix-quick-icon">💱</div>
+            <div class="admix-quick-text">
+                <span class="admix-quick-label">Currencies</span>
+                <span class="admix-quick-desc">Manage the 20 seeded currencies</span>
+            </div>
+        </a>
+    </div>
+
+    <!-- APP SECTIONS -->
+    {% if app_list %}
+        <div class="admix-apps">
+            {% for app in app_list %}
+                <div class="admix-app">
+                    <div class="admix-app-header">
+                        <h2>
+                            {% if app.app_url %}
+                                <a href="{{ app.app_url }}">{{ app.name }}</a>
+                            {% else %}
+                                {{ app.name }}
+                            {% endif %}
+                        </h2>
+                        <span class="admix-app-badge">{{ app.models|length }} model{{ app.models|length|pluralize }}</span>
+                    </div>
+
+                    <div class="admix-grid">
+                        {% for model in app.models %}
+                            {% if model.admin_url %}
+                                <div class="admix-card{% if model.object_name == 'Social application' %} admix-card-star{% endif %}">
+                                    <div class="admix-card-top">
+                                        <div class="admix-card-icon">
+                                            {% if model.object_name == "User" %}👤
+                                            {% elif model.object_name == "Group" %}👥
+                                            {% elif model.object_name == "Transaction" %}💸
+                                            {% elif model.object_name == "Category" %}🏷️
+                                            {% elif model.object_name == "Budget" %}🎯
+                                            {% elif model.object_name == "Currency" %}💱
+                                            {% elif model.object_name == "UserCurrency" %}🌐
+                                            {% elif model.object_name == "Social application" %}🔑
+                                            {% elif model.object_name == "Social account" %}🔗
+                                            {% elif model.object_name == "Social application token" %}🎫
+                                            {% elif "mail" in model.object_name %}📧
+                                            {% else %}📄{% endif %}
+                                        </div>
+                                        <div class="admix-card-titles">
+                                            <div class="admix-card-title">{{ model.name }}</div>
+                                            <div class="admix-card-desc">
+                                                {% if model.object_name == "User" %}User accounts and authentication
+                                                {% elif model.object_name == "Group" %}Permission groups
+                                                {% elif model.object_name == "Transaction" %}Every income / expense entry
+                                                {% elif model.object_name == "Category" %}Income & expense categories
+                                                {% elif model.object_name == "Budget" %}Monthly budget limits
+                                                {% elif model.object_name == "Currency" %}Supported currencies (20 seeded)
+                                                {% elif model.object_name == "UserCurrency" %}Currencies each user enabled
+                                                {% elif model.object_name == "Social application" %}⭐ Configure Google login here
+                                                {% elif model.object_name == "Social account" %}Users' linked Google accounts
+                                                {% elif model.object_name == "Social application token" %}Provider access tokens
+                                                {% elif "mail" in model.object_name %}Verified email addresses
+                                                {% else %}Manage {{ model.name|lower }}
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="admix-card-actions">
+                                        <a href="{{ model.admin_url }}" class="admix-card-btn admix-card-btn-view">
+                                            View all
+                                        </a>
+                                        {% if model.add_url %}
+                                            <a href="{{ model.add_url }}" class="admix-card-btn admix-card-btn-add">
+                                                ＋ Add
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="admix-recent">
+            <p class="admix-recent-empty">You don't have permission to view anything.</p>
+        </div>
+    {% endif %}
+
+    <!-- RECENT ACTIVITY -->
+    <div class="admix-recent">
+        <h2>🕓 Recent Activity</h2>
+        {% if recent_actions %}
+            <ul class="admix-recent-list">
+                {% for action in recent_actions %}
+                    {% for item in action.items %}
+                        <li class="admix-recent-item">
+                            {% if item.url %}
+                                <a href="{{ item.url }}">{{ item.title }}</a>
+                            {% else %}
+                                {{ item.title }}
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="admix-recent-empty">No recent activity yet.</p>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
+
+{% block sidebar %}{% endblock %}

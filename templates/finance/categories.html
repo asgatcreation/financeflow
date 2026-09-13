@@ -1,0 +1,41 @@
+{% extends "base_app.html" %}
+{% block title %}Categories · FinanceFlow{% endblock %}
+
+{% block content %}
+<div class="app-content">
+    <header class="page-header">
+        <div>
+            <h1>Categories</h1>
+            <p class="subtitle">{{ categories|length }} categor{{ categories|length|pluralize:"y,ies" }}</p>
+        </div>
+        <a href="{% url 'finance:category_create' %}" class="btn btn-primary">+ New category</a>
+    </header>
+
+    {% if categories %}
+        <div class="category-grid">
+            {% for c in categories %}
+                <div class="category-card" style="border-top: 3px solid {{ c.color }}">
+                    <div class="category-icon" style="background:{{ c.color }}20; color:{{ c.color }}">
+                        {{ c.icon }}
+                    </div>
+                    <div class="category-body">
+                        <h3>{{ c.name }}</h3>
+                        <span class="pill pill-{{ c.type }}">{{ c.get_type_display }}</span>
+                    </div>
+                    <div class="category-actions">
+                        <a href="{% url 'finance:category_update' c.pk %}" class="icon-btn" title="Edit">✏️</a>
+                        <a href="{% url 'finance:category_delete' c.pk %}" class="icon-btn" title="Delete">🗑️</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">🏷️</div>
+            <h2>No categories yet</h2>
+            <p>Create categories to organize your income and expenses.</p>
+            <a href="{% url 'finance:category_create' %}" class="btn btn-primary">+ Create category</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
