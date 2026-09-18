@@ -10,6 +10,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#10b981">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="FinanceFlow">
+    <meta name="mobile-web-app-capable" content="yes">
 </head>
 <body class="public-layout">
     <!-- Page loader -->
@@ -179,6 +186,48 @@
                 });
             });
         })();
+    </script>
+    <!-- PWA Install Banner -->
+    <div class="pwa-banner" id="pwaBanner" style="display:none;">
+        <span class="pwa-banner-icon">📲</span>
+        <div class="pwa-banner-text">
+            <strong>Install FinanceFlow</strong>
+            <span>Add to your home screen</span>
+        </div>
+        <button class="pwa-banner-btn" id="pwaInstall">Install</button>
+        <button class="pwa-banner-close" id="pwaClose" aria-label="Dismiss">✕</button>
+    </div>
+
+    <script>
+        // Service worker registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(() => {});
+            });
+        }
+
+        // Install prompt
+        let deferredPrompt = null;
+        const banner = document.getElementById('pwaBanner');
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            if (banner) banner.style.display = 'flex';
+        });
+        document.getElementById('pwaInstall')?.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            deferredPrompt = null;
+            if (banner) banner.style.display = 'none';
+        });
+        document.getElementById('pwaClose')?.addEventListener('click', () => {
+            if (banner) banner.style.display = 'none';
+            try { localStorage.setItem('pwa_dismissed', '1'); } catch (e) {}
+        });
+        if (localStorage.getItem('pwa_dismissed') === '1' && banner) {
+            banner.style.display = 'none';
+        }
     </script>
 </body>
 </html>

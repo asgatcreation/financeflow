@@ -3831,4 +3831,60 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.5; cursor: po
 .tx6-chip-io .neg { color: var(--expense); }
 
 
+/* ══ PWA INSTALL BANNER ══ */
+.pwa-banner {
+    position: fixed;
+    bottom: 1.25rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.85rem 1rem;
+    background: #0f172a;
+    color: #fff;
+    border-radius: 16px;
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.35);
+    max-width: calc(100% - 2rem);
+    animation: pwaSlideUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes pwaSlideUp {
+    from { opacity: 0; transform: translate(-50%, 24px); }
+    to   { opacity: 1; transform: translate(-50%, 0); }
+}
+.pwa-banner-icon { font-size: 1.35rem; }
+.pwa-banner-text { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+.pwa-banner-text strong { font-size: 0.85rem; font-weight: 800; letter-spacing: -0.005em; }
+.pwa-banner-text span { font-size: 0.72rem; color: rgba(255,255,255,0.6); font-weight: 500; }
+.pwa-banner-btn {
+    background: #10b981;
+    color: #fff;
+    border: none;
+    padding: 0.55rem 1rem;
+    border-radius: 10px;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    margin-left: 0.35rem;
+}
+.pwa-banner-btn:hover { background: #059669; transform: translateY(-1px); }
+.pwa-banner-close {
+    background: transparent;
+    border: none;
+    color: rgba(255,255,255,0.5);
+    font-size: 0.9rem;
+    cursor: pointer;
+    padding: 0.25rem;
+    line-height: 1;
+    transition: color 0.15s;
+}
+.pwa-banner-close:hover { color: #fff; }
+@media (max-width: 520px) {
+    .pwa-banner { flex-wrap: wrap; justify-content: center; text-align: center; }
+    .pwa-banner-text { align-items: center; }
+}
 

@@ -1,0 +1,23 @@
+{
+  "name": "FinanceFlow — Multi-Currency Finance Tracker",
+  "short_name": "FinanceFlow",
+  "description": "Track income, expenses, and budgets across up to 5 currencies.",
+  "start_url": "/dashboard/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0b1120",
+  "theme_color": "#10b981",
+  "categories": ["finance", "productivity"],
+  "icons": [
+    { "src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Add transaction", "short_name": "New", "url": "/transactions/new/" },
+    { "name": "Reports", "short_name": "Reports", "url": "/reports/" },
+    { "name": "Currencies", "short_name": "Currencies", "url": "/currencies/" }
+  ]
+}
