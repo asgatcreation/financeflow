@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.db.models import Q, Sum
 from django.db.models.functions import TruncMonth
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.views.generic import (
     ListView, CreateView, UpdateView, DeleteView, TemplateView, View
@@ -111,32 +111,27 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         today = date.today()
         first, last = month_range(today)
 
-        # User's enabled currencies
         user_currencies = list(
             UserCurrency.objects.filter(user=user).select_related("currency")
         )
         user_currency_list = [uc.currency for uc in user_currencies]
         currency_ids = [c.id for c in user_currency_list]
 
-        # If user has no currencies, no charts
         if not currency_ids:
             ctx.update({
-                "user_currencies": [],
-                "per_currency": [],
-                "recent": [],
-                "budgets": [],
-                "now_month": today.strftime("%B %Y"),
+                "user_currencies": [], "per_currency": [], "recent": [],
+                "budgets": [], "now_month": today.strftime("%B %Y"),
                 "chart_labels": json.dumps([]),
                 "chart_income": json.dumps([]),
                 "chart_expense": json.dumps([]),
-                "cat_labels": json.dumps([]),
-                "cat_data": json.dumps([]),
+                "cat_labels": json.dumps([]), "cat_data": json.dumps([]),
                 "cat_colors": json.dumps([]),
+                "all_currency_series": json.dumps([]),
                 "no_currencies": True,
             })
             return ctx
 
-        # ── Per-currency summary cards ──
+        # Per-currency summary
         per_currency = []
         for c in user_currency_list:
             qs = Transaction.objects.filter(user=user, currency=c)
@@ -157,8 +152,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 "m_net": m_income - m_expense,
             })
 
-        
-        # ── Charts: allow currency switching via ?chart=CODE ──
+        # Charts use primary or ?chart=CODE
         chart_code = self.request.GET.get("chart", "").upper()
         pc = next((c for c in user_currency_list if c.code == chart_code), None)
         if not pc:
@@ -167,6 +161,19 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         labels, income, expense = monthly_series(user, 6, currency=pc)
         cat_labels, cat_data, cat_colors = category_breakdown(user, "expense", first, last, currency=pc)
         inc_cat_labels, inc_cat_data, inc_cat_colors = category_breakdown(user, "income", first, last, currency=pc)
+
+        # ── All-currency series (normalized to primary using rough FX or raw) ──
+        all_currency_series = []
+        palette = ["#10b981", "#0ea5e9", "#8b5cf6", "#f59e0b", "#f43f5e"]
+        for i, c in enumerate(user_currency_list):
+            _, c_income, c_expense = monthly_series(user, 6, currency=c)
+            c_net = [a - b for a, b in zip(c_income, c_expense)]
+            all_currency_series.append({
+                "code": c.code,
+                "flag": c.flag,
+                "color": palette[i % len(palette)],
+                "net_series": c_net,
+            })
 
         recent = (
             Transaction.objects.filter(user=user, currency__in=currency_ids)
@@ -187,13 +194,14 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             "chart_labels": json.dumps(labels),
             "chart_income": json.dumps(income),
             "chart_expense": json.dumps(expense),
-                        "cat_labels": json.dumps(cat_labels),
+            "cat_labels": json.dumps(cat_labels),
             "cat_data": json.dumps(cat_data),
             "cat_colors": json.dumps(cat_colors),
             "inc_cat_labels": json.dumps(inc_cat_labels),
             "inc_cat_data": json.dumps(inc_cat_data),
             "inc_cat_colors": json.dumps(inc_cat_colors),
             "chart_currency": pc,
+            "all_currency_series": json.dumps(all_currency_series),
             "no_currencies": False,
         })
         return ctx
@@ -280,13 +288,14 @@ class TransactionListView(LoginRequiredMixin, ListView):
     paginate_by = 15
 
     def get_queryset(self):
-        qs = Transaction.objects.filter(user=self.request.user).select_related("category")
-
+        qs = Transaction.objects.filter(user=self.request.user).select_related("category", "currency")
         q = self.request.GET.get("q", "").strip()
         type_ = self.request.GET.get("type", "")
         category_id = self.request.GET.get("category", "")
+        currency_code = self.request.GET.get("currency", "")
         start = self.request.GET.get("start", "")
         end = self.request.GET.get("end", "")
+        sort = self.request.GET.get("sort", "newest")
 
         if q:
             qs = qs.filter(Q(description__icontains=q) | Q(notes__icontains=q))
@@ -294,55 +303,130 @@ class TransactionListView(LoginRequiredMixin, ListView):
             qs = qs.filter(type=type_)
         if category_id:
             qs = qs.filter(category_id=category_id)
+        if currency_code:
+            qs = qs.filter(currency__code=currency_code)
         if start:
             qs = qs.filter(date__gte=start)
         if end:
             qs = qs.filter(date__lte=end)
-        return qs
+
+        sort_map = {
+            "newest": "-date",
+            "oldest": "date",
+            "highest": "-amount",
+            "lowest": "amount",
+        }
+        return qs.order_by(sort_map.get(sort, "-date"))
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["categories"] = Category.objects.filter(user=self.request.user)
+        user = self.request.user
+        ctx["categories"] = Category.objects.filter(user=user)
+        ctx["user_currencies"] = UserCurrency.objects.filter(user=user).select_related("currency")
+
         ctx["q"] = self.request.GET.get("q", "")
         ctx["type"] = self.request.GET.get("type", "")
         ctx["category_id"] = self.request.GET.get("category", "")
+        ctx["currency_code"] = self.request.GET.get("currency", "")
         ctx["start"] = self.request.GET.get("start", "")
         ctx["end"] = self.request.GET.get("end", "")
+        ctx["sort"] = self.request.GET.get("sort", "newest")
 
-        # Per-currency totals on the filtered set
         agg = (
             self.get_queryset()
-            .values("currency__code", "currency__symbol", "currency__flag", "type")
+            .values("currency__code", "currency__symbol", "currency__flag", "currency__name", "type")
             .annotate(total=Sum("amount"))
             .order_by("currency__code")
         )
-
-        # Build per-currency breakdown: [{code, symbol, flag, income, expense, net}]
         by_currency = {}
         for row in agg:
             code = row["currency__code"] or "—"
             if code not in by_currency:
                 by_currency[code] = {
-                    "code": code,
-                    "symbol": row["currency__symbol"] or "",
+                    "code": code, "symbol": row["currency__symbol"] or "",
                     "flag": row["currency__flag"] or "🏳️",
-                    "income": Decimal("0"),
-                    "expense": Decimal("0"),
+                    "name": row["currency__name"] or "Unknown",
+                    "income": Decimal("0"), "expense": Decimal("0"),
                 }
             if row["type"] == "income":
                 by_currency[code]["income"] += row["total"]
             else:
                 by_currency[code]["expense"] += row["total"]
-
-        # Compute net
         for v in by_currency.values():
             v["net"] = v["income"] - v["expense"]
-
-        ctx["currency_totals"] = sorted(
-            by_currency.values(),
-            key=lambda x: (-(x["income"] + x["expense"]), x["code"])
-        )
+        ctx["currency_totals"] = sorted(by_currency.values(), key=lambda x: -(x["income"] + x["expense"]))
         return ctx
+
+
+
+
+
+class CurrencyDetailView(LoginRequiredMixin, TemplateView):
+    template_name = "finance/currency_detail.html"
+    PER_PAGE = 10
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        code = self.kwargs["code"].upper()
+        user = self.request.user
+
+        try:
+            currency = Currency.objects.get(code=code)
+        except Currency.DoesNotExist:
+            ctx["not_found"] = True
+            return ctx
+
+        if not UserCurrency.objects.filter(user=user, currency=currency).exists():
+            ctx["not_found"] = True
+            return ctx
+
+        qs = (
+            Transaction.objects.filter(user=user, currency=currency)
+            .select_related("category")
+        )
+
+        sort = self.request.GET.get("sort", "newest")
+        sort_map = {
+            "newest": "-date",
+            "oldest": "date",
+            "highest": "-amount",
+            "lowest": "amount",
+            "category": "category__name",
+        }
+        qs = qs.order_by(sort_map.get(sort, "-date"))
+
+        income = qs.filter(type="income").aggregate(t=Sum("amount"))["t"] or Decimal("0")
+        expense = qs.filter(type="expense").aggregate(t=Sum("amount"))["t"] or Decimal("0")
+        net = income - expense
+
+        cat_breakdown = (
+            qs.filter(type="expense")
+            .values("category__name", "category__icon", "category__color")
+            .annotate(total=Sum("amount"))
+            .order_by("-total")[:8]
+        )
+
+        # ── Pagination ──
+        from django.core.paginator import Paginator
+        paginator = Paginator(qs, self.PER_PAGE)
+        page_number = self.request.GET.get("page", 1)
+        page_obj = paginator.get_page(page_number)
+
+        ctx.update({
+            "currency": currency,
+            "transactions": page_obj,
+            "page_obj": page_obj,
+            "paginator": paginator,
+            "income": income,
+            "expense": expense,
+            "net": net,
+            "count": paginator.count,
+            "sort": sort,
+            "cat_breakdown": cat_breakdown,
+            "not_found": False,
+        })
+        return ctx
+
 
 
 class TransactionCreateView(LoginRequiredMixin, CreateView):
@@ -593,13 +677,18 @@ class ReportsView(LoginRequiredMixin, TemplateView):
         today = date.today()
         first, last = month_range(today)
 
-        user_currencies = list(UserCurrency.objects.filter(user=user).select_related("currency"))
+        user_currencies = list(
+            UserCurrency.objects.filter(user=user).select_related("currency")
+        )
         currency_list = [uc.currency for uc in user_currencies]
 
         if not currency_list:
             ctx["no_currencies"] = True
             ctx["user_currencies"] = []
             ctx["active_currency"] = None
+            ctx["per_currency"] = []
+            ctx["all_currency_series"] = json.dumps([])
+            ctx["per_currency_json"] = json.dumps([])
             return ctx
 
         code = self.request.GET.get("currency", "").upper()
@@ -609,7 +698,7 @@ class ReportsView(LoginRequiredMixin, TemplateView):
         cat_labels, cat_data, cat_colors = category_breakdown(user, "expense", first, last, currency=active)
         inc_labels, inc_data, inc_colors = category_breakdown(user, "income", first, last, currency=active)
 
-        # ── Predictions: weighted moving average ──
+        # ── Predictions ──
         income_nonzero = [x for x in income if x > 0]
         expense_nonzero = [x for x in expense if x > 0]
 
@@ -632,20 +721,55 @@ class ReportsView(LoginRequiredMixin, TemplateView):
         income_delta = ((current_income - prev_income) / prev_income * 100) if prev_income > 0 else 0
         expense_delta = ((current_expense - prev_expense) / prev_expense * 100) if prev_expense > 0 else 0
 
-        # Top spending category
         top_cat_label = cat_labels[0] if cat_labels else "—"
         top_cat_amount = cat_data[0] if cat_data else 0
 
-        # Savings rate
         savings_rate = ((current_income - current_expense) / current_income * 100) if current_income > 0 else 0
-
-        # Average monthly expense
         avg_expense = sum(expense) / len([e for e in expense if e > 0]) if any(e > 0 for e in expense) else 0
         avg_income = sum(income) / len([i for i in income if i > 0]) if any(i > 0 for i in income) else 0
+
+        # ── Per-currency totals ──
+        per_currency = []
+        for c in currency_list:
+            qs = Transaction.objects.filter(user=user, currency=c)
+            ti = qs.filter(type="income").aggregate(t=Sum("amount"))["t"] or Decimal("0")
+            te = qs.filter(type="expense").aggregate(t=Sum("amount"))["t"] or Decimal("0")
+            per_currency.append({
+                "currency": c,
+                "total_income": ti,
+                "total_expense": te,
+                "balance": ti - te,
+            })
+
+        # ── All-currency net series (last 6 months) ──
+        all_currency_series = []
+        palette = ["#10b981", "#0ea5e9", "#8b5cf6", "#f59e0b", "#f43f5e"]
+        for i, c in enumerate(currency_list):
+            _, ci, ce = monthly_series(user, 6, currency=c)
+            cn = [a - b for a, b in zip(ci, ce)]
+            all_currency_series.append({
+                "code": c.code,
+                "flag": c.flag,
+                "color": palette[i % len(palette)],
+                "net_series": cn,
+            })
 
         ctx.update({
             "user_currencies": currency_list,
             "active_currency": active,
+            "per_currency": per_currency,
+            "all_currency_series": json.dumps(all_currency_series),
+            "per_currency_json": json.dumps([
+                {
+                    "flag": row["currency"].flag,
+                    "code": row["currency"].code,
+                    "symbol": row["currency"].symbol,
+                    "income": float(row["total_income"]),
+                    "expense": float(row["total_expense"]),
+                    "net": float(row["balance"]),
+                }
+                for row in per_currency
+            ]),
             "chart_labels": json.dumps(labels),
             "chart_income": json.dumps(income),
             "chart_expense": json.dumps(expense),
@@ -658,12 +782,10 @@ class ReportsView(LoginRequiredMixin, TemplateView):
             "now_month": today.strftime("%B %Y"),
             "today": today,
             "no_currencies": False,
-            # Predictions
             "pred_income": pred_income,
             "pred_expense": pred_expense,
             "pred_net": pred_net,
             "pred_month": (today.replace(day=1) + timedelta(days=32)).replace(day=1).strftime("%B %Y"),
-            # Insights
             "current_income": current_income,
             "current_expense": current_expense,
             "income_delta": income_delta,
@@ -675,6 +797,4 @@ class ReportsView(LoginRequiredMixin, TemplateView):
             "avg_income": avg_income,
         })
         return ctx
-
-
 

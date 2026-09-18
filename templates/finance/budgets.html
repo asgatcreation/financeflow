@@ -3,57 +3,68 @@
 
 {% block content %}
 <div class="app-content">
-    <header class="page-header">
+    <header class="txn-header">
         <div>
-            <h1>Budgets</h1>
-            <p class="subtitle">{{ budgets|length }} budget{{ budgets|length|pluralize }}</p>
+            <h1>🎯 Budgets</h1>
+            <p class="subtitle">{{ budgets|length }} budget{{ budgets|length|pluralize }} active</p>
         </div>
-        <a href="{% url 'finance:budget_create' %}" class="btn btn-primary">+ New budget</a>
+        <a href="{% url 'finance:budget_create' %}" class="txn-btn txn-btn-primary">＋ New budget</a>
     </header>
 
     {% if budgets %}
-        <div class="budget-grid">
-            {% for b in budgets %}
-                <div class="budget-card {% if b.is_over %}over{% elif b.is_warning %}warn{% endif %}">
-                    <div class="budget-card-head">
-                        <div class="budget-icon-lg" style="background:{{ b.category.color }}20; color:{{ b.category.color }}">
-                            {{ b.category.icon }}
-                        </div>
-                        <div>
-                            <h3>{{ b.category.name }}</h3>
-                            <span class="budget-period">{{ b.month|stringformat:"02d" }}/{{ b.year }}</span>
-                        </div>
-                        <div class="budget-card-actions">
-                            <a href="{% url 'finance:budget_update' b.pk %}" class="icon-btn">✏️</a>
-                            <a href="{% url 'finance:budget_delete' b.pk %}" class="icon-btn">🗑️</a>
-                        </div>
-                    </div>
-                    <div class="budget-card-figures">
-                        <span class="big">${{ b.spent|floatformat:2 }}</span>
-                        <span class="muted">of ${{ b.amount|floatformat:2 }}</span>
-                    </div>
-                    <div class="progress-bar {% if b.is_over %}over{% elif b.is_warning %}warn{% endif %}">
-                        <div class="progress-fill" style="width:{{ b.percent_used }}%; background:{% if b.is_over %}var(--danger){% elif b.is_warning %}var(--warning){% else %}{{ b.category.color }}{% endif %}"></div>
-                    </div>
-                    <div class="budget-card-foot">
-                        {% if b.is_over %}
-                            <span class="budget-status over">🚨 Over budget by ${{ b.remaining|floatformat:2|slice:"1:" }}</span>
-                        {% elif b.is_warning %}
-                            <span class="budget-status warn">⚠️ {{ b.percent_used }}% used</span>
-                        {% else %}
-                            <span class="budget-status">✅ {{ b.percent_used }}% used · ${{ b.remaining|floatformat:2 }} left</span>
-                        {% endif %}
+    <section class="bud-v3-grid">
+        {% for b in budgets %}
+        <div class="bud-v3-card {% if b.is_over %}bud-v3-over{% elif b.is_warning %}bud-v3-warn{% endif %}">
+            <div class="bud-v3-header">
+                <div class="bud-v3-icon" style="background:{{ b.category.color }}15; color:{{ b.category.color }};">
+                    {{ b.category.icon }}
+                </div>
+                <div class="bud-v3-meta">
+                    <div class="bud-v3-name">{{ b.category.name }}</div>
+                    <div class="bud-v3-period">
+                        {{ b.currency.flag|default:"" }} {{ b.currency.code|default:"" }} · {{ b.month|stringformat:"02d" }}/{{ b.year }}
                     </div>
                 </div>
-            {% endfor %}
+                <div class="bud-v3-actions">
+                    <a href="{% url 'finance:budget_update' b.pk %}" class="txn-action">✏️</a>
+                    <a href="{% url 'finance:budget_delete' b.pk %}" class="txn-action txn-action-del">🗑️</a>
+                </div>
+            </div>
+
+            <div class="bud-v3-figures">
+                <div class="bud-v3-spent">
+                    <span class="bud-v3-spent-label">Spent</span>
+                    <span class="bud-v3-spent-value">{{ b.currency.symbol|default:"" }}{{ b.spent|floatformat:2 }}</span>
+                </div>
+                <div class="bud-v3-of">
+                    <span class="bud-v3-of-label">of</span>
+                    <span class="bud-v3-of-value">{{ b.currency.symbol|default:"" }}{{ b.amount|floatformat:2 }}</span>
+                </div>
+            </div>
+
+            <div class="bud-v3-bar">
+                <div class="bud-v3-fill" style="width:{{ b.percent_used }}%; background:{% if b.is_over %}var(--expense){% elif b.is_warning %}var(--warning){% else %}{{ b.category.color }}{% endif %};"></div>
+            </div>
+
+            <div class="bud-v3-footer">
+                {% if b.is_over %}
+                    <span class="bud-v3-status over">🚨 Over budget by {{ b.currency.symbol }}{{ b.remaining|floatformat:2|cut:"-" }}</span>
+                {% elif b.is_warning %}
+                    <span class="bud-v3-status warn">⚠️ {{ b.percent_used }}% used · {{ b.currency.symbol }}{{ b.remaining|floatformat:2 }} left</span>
+                {% else %}
+                    <span class="bud-v3-status ok">✅ {{ b.percent_used }}% used · {{ b.currency.symbol }}{{ b.remaining|floatformat:2 }} left</span>
+                {% endif %}
+            </div>
         </div>
+        {% endfor %}
+    </section>
     {% else %}
-        <div class="empty-state">
-            <div class="empty-icon">🎯</div>
-            <h2>No budgets yet</h2>
-            <p>Set monthly limits per category to track your spending.</p>
-            <a href="{% url 'finance:budget_create' %}" class="btn btn-primary">+ Create budget</a>
-        </div>
+    <div class="empty-state">
+        <div class="empty-icon">🎯</div>
+        <h2>No budgets yet</h2>
+        <p>Set monthly limits per category to track your spending.</p>
+        <a href="{% url 'finance:budget_create' %}" class="btn btn-primary">+ Create budget</a>
+    </div>
     {% endif %}
 </div>
 {% endblock %}

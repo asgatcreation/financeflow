@@ -36,4 +36,8 @@ urlpatterns = [
     path("currencies/", views.CurrenciesView.as_view(), name="currencies"),
     path("currencies/<int:pk>/primary/", views.CurrencySetPrimaryView.as_view(), name="currency_primary"),
     path("currencies/<int:pk>/remove/", views.CurrencyRemoveView.as_view(), name="currency_remove"),
+    
+    path("transactions/currency/<str:code>/", views.CurrencyDetailView.as_view(), name="currency_detail"),
+        
+        
 ]

@@ -4,185 +4,88 @@
 {% block content %}
 <div class="app-content">
 
-    <!-- ═══ HEADER ═══ -->
-    <header class="txn-header">
+    <header class="tx5-header">
         <div>
-            <h1>Transactions</h1>
-            <p class="subtitle">
-                {{ page_obj.paginator.count }} entr{{ page_obj.paginator.count|pluralize:"y,ies" }}
-                {% if currency_totals %}· {{ currency_totals|length }} currenc{{ currency_totals|length|pluralize:"y,ies" }}{% endif %}
-            </p>
+            <h1>Statement</h1>
+            <p class="tx5-sub">{{ page_obj.paginator.count }} entr{{ page_obj.paginator.count|pluralize:"y,ies" }} across {{ currency_totals|length }} currenc{{ currency_totals|length|pluralize:"y,ies" }}</p>
         </div>
-        <div class="txn-header-actions">
-            <a href="{% url 'finance:transaction_export' %}" class="txn-btn txn-btn-ghost">
-                <span>📥</span> Export CSV
-            </a>
-            <a href="{% url 'finance:transaction_create' %}" class="txn-btn txn-btn-primary">
-                <span>＋</span> Add transaction
-            </a>
+        <div class="tx5-head-actions">
+            <a href="{% url 'finance:transaction_export' %}" class="tx5-btn tx5-btn-ghost">📥 CSV</a>
+            <a href="{% url 'finance:transaction_create' %}" class="tx5-btn tx5-btn-dark">＋ New</a>
         </div>
     </header>
 
-    <!-- ═══ CURRENCY HERO CARDS ═══ -->
-    {% if currency_totals %}
-        <section class="txn-hero-grid">
-            {% for ct in currency_totals %}
-                <div class="txn-hero-card">
-                    <div class="txn-hero-top">
-                        <div class="txn-hero-flag">{{ ct.flag }}</div>
-                        <div class="txn-hero-meta">
-                            <div class="txn-hero-code">{{ ct.code }}</div>
-                            <div class="txn-hero-label">
-                                {% if ct.income > ct.expense %}Healthy balance
-                                {% elif ct.income == 0 %}No activity yet
-                                {% else %}Net outgo{% endif %}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="txn-hero-net">
-                        <div class="txn-hero-net-label">Net Balance</div>
-                        <div class="txn-hero-net-value {% if ct.net >= 0 %}pos{% else %}neg{% endif %}">
-                            {% if ct.net < 0 %}−{% endif %}{{ ct.symbol }}{{ ct.net|floatformat:2|cut:"-" }}
-                        </div>
-                    </div>
-
-                    <div class="txn-hero-bars">
-                        <div class="txn-hero-bar-row">
-                            <div class="txn-hero-bar-label">
-                                <span class="txn-hero-bar-dot" style="background:#10b981"></span>
-                                Income
-                            </div>
-                            <div class="txn-hero-bar-value pos">
-                                +{{ ct.symbol }}{{ ct.income|floatformat:2 }}
-                            </div>
-                        </div>
-                        <div class="txn-hero-bar-row">
-                            <div class="txn-hero-bar-label">
-                                <span class="txn-hero-bar-dot" style="background:#f43f5e"></span>
-                                Expense
-                            </div>
-                            <div class="txn-hero-bar-value neg">
-                                −{{ ct.symbol }}{{ ct.expense|floatformat:2 }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            {% endfor %}
-        </section>
+        {% if currency_totals %}
+    <section class="tx6-strip">
+        {% for ct in currency_totals %}
+        <a href="{% url 'finance:currency_detail' ct.code %}" class="tx6-chip">
+            <div class="tx6-chip-top">
+                <span class="tx6-chip-flag">{{ ct.flag }}</span>
+                <span class="tx6-chip-code">{{ ct.code }}</span>
+                <span class="tx6-chip-arrow">→</span>
+            </div>
+            <div class="tx6-chip-net {% if ct.net >= 0 %}pos{% else %}neg{% endif %}">
+                {% if ct.net < 0 %}－{% else %}＋{% endif %}{{ ct.symbol }}{{ ct.net|floatformat:0|cut:"-" }}
+            </div>
+            <div class="tx6-chip-io">
+                <span class="pos">＋{{ ct.symbol }}{{ ct.income|floatformat:0 }}</span>
+                <span class="neg">－{{ ct.symbol }}{{ ct.expense|floatformat:0 }}</span>
+            </div>
+        </a>
+        {% endfor %}
+    </section>
     {% endif %}
 
-    <!-- ═══ FILTER BAR ═══ -->
-    <form method="get" class="txn-filter">
-        <div class="txn-search">
-            <span class="txn-search-icon">🔍</span>
-            <input type="text" name="q" placeholder="Search description or notes…"
-                   value="{{ q }}">
+
+
+    <form method="get" class="tx5-filter">
+        <div class="tx5-search">
+            <span>🔍</span>
+            <input type="text" name="q" placeholder="Search…" value="{{ q }}">
         </div>
-
-        <select name="type">
-            <option value="">All types</option>
-            <option value="income" {% if type == "income" %}selected{% endif %}>Income</option>
-            <option value="expense" {% if type == "expense" %}selected{% endif %}>Expense</option>
-        </select>
-
-        <select name="category">
-            <option value="">All categories</option>
-            {% for c in categories %}
-                <option value="{{ c.pk }}" {% if category_id == c.pk|stringformat:"s" %}selected{% endif %}>
-                    {{ c.icon }} {{ c.name }}
-                </option>
-            {% endfor %}
-        </select>
-
-        <input type="date" name="start" value="{{ start }}">
-        <input type="date" name="end" value="{{ end }}">
-
-        <button type="submit" class="txn-btn txn-btn-primary txn-btn-sm">Apply</button>
-
-        {% if q or type or category_id or start or end %}
-            <a href="{% url 'finance:transactions' %}" class="txn-btn txn-btn-ghost txn-btn-sm">Clear</a>
-        {% endif %}
+        <select name="currency"><option value="">Currency</option>{% for uc in user_currencies %}<option value="{{ uc.currency.code }}" {% if currency_code == uc.currency.code %}selected{% endif %}>{{ uc.currency.flag }} {{ uc.currency.code }}</option>{% endfor %}</select>
+        <select name="type"><option value="">Type</option><option value="income" {% if type == "income" %}selected{% endif %}>Income</option><option value="expense" {% if type == "expense" %}selected{% endif %}>Expense</option></select>
+        <select name="category"><option value="">Category</option>{% for c in categories %}<option value="{{ c.pk }}" {% if category_id == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.icon }} {{ c.name }}</option>{% endfor %}</select>
+        <select name="sort"><option value="newest" {% if sort == "newest" %}selected{% endif %}>Newest</option><option value="oldest" {% if sort == "oldest" %}selected{% endif %}>Oldest</option><option value="highest" {% if sort == "highest" %}selected{% endif %}>Highest</option><option value="lowest" {% if sort == "lowest" %}selected{% endif %}>Lowest</option></select>
+        <button type="submit" class="tx5-btn tx5-btn-dark">Apply</button>
+        {% if q or type or category_id or currency_code or sort != 'newest' %}<a href="{% url 'finance:transactions' %}" class="tx5-clear">Clear</a>{% endif %}
     </form>
 
-    <!-- ═══ TRANSACTION TIMELINE ═══ -->
     {% if transactions %}
-        <section class="txn-timeline">
-            <div class="txn-timeline-header">
-                <span class="txn-timeline-line"></span>
-                <span class="txn-timeline-title">
-                    {{ page_obj.paginator.count }} entr{{ page_obj.paginator.count|pluralize:"y,ies" }}
-                </span>
-                <span class="txn-timeline-line"></span>
-            </div>
-
-            {% for t in transactions %}
-                <div class="txn-item {% if t.type == 'income' %}txn-item-income{% else %}txn-item-expense{% endif %}">
-                    <div class="txn-item-icon" style="background:{{ t.category.color|default:'#6366f1' }}15; color:{{ t.category.color|default:'#6366f1' }};">
-                        {{ t.category.icon|default:"💳" }}
-                    </div>
-
-                    <div class="txn-item-body">
-                        <div class="txn-item-top">
-                            <div class="txn-item-desc">{{ t.description }}</div>
-                            <div class="txn-item-amount {% if t.type == 'income' %}pos{% else %}neg{% endif %}">
-                                {% if t.type == 'income' %}＋{% else %}－{% endif %}
-                                {{ t.currency.symbol|default:"" }}{{ t.amount|floatformat:2 }}
-                            </div>
-                        </div>
-
-                        <div class="txn-item-bottom">
-                            <div class="txn-item-tags">
-                                <span class="txn-tag txn-tag-category"
-                                      style="background:{{ t.category.color|default:'#6366f1' }}12; color:{{ t.category.color|default:'#6366f1' }};">
-                                    {{ t.category.name|default:"Uncategorized" }}
-                                </span>
-                                <span class="txn-tag txn-tag-currency">
-                                    {{ t.currency.flag|default:"🏳️" }} {{ t.currency.code|default:"—" }}
-                                </span>
-                                <span class="txn-tag txn-tag-date">
-                                    📅 {{ t.date|date:"M d, Y" }}
-                                </span>
-                            </div>
-
-                            <div class="txn-item-actions">
-                                <a href="{% url 'finance:transaction_update' t.pk %}"
-                                   class="txn-action" title="Edit">✏️</a>
-                                <a href="{% url 'finance:transaction_delete' t.pk %}"
-                                   class="txn-action txn-action-del" title="Delete">🗑️</a>
-                            </div>
-                        </div>
-
-                        {% if t.notes %}
-                            <div class="txn-item-notes">{{ t.notes }}</div>
-                        {% endif %}
-                    </div>
+    <div class="tx5-ledger">
+        {% for t in transactions %}
+        <div class="tx5-row {% if t.type == 'income' %}tx5-row-in{% else %}tx5-row-out{% endif %}">
+            <div class="tx5-row-icon" style="background:{{ t.category.color|default:'#6366f1' }}15; color:{{ t.category.color|default:'#6366f1' }};">{{ t.category.icon|default:"💳" }}</div>
+            <div class="tx5-row-main">
+                <div class="tx5-row-desc">{{ t.description }}</div>
+                <div class="tx5-row-meta">
+                    <span>{{ t.category.name|default:"Uncategorized" }}</span>
+                    <span class="tx5-dot">·</span>
+                    <span>{{ t.date|date:"M d, Y" }}</span>
                 </div>
-            {% endfor %}
-        </section>
-
-        {% if is_paginated %}
-            <div class="txn-pagination">
-                {% if page_obj.has_previous %}
-                    <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if type %}&type={{ type }}{% endif %}{% if category_id %}&category={{ category_id }}{% endif %}{% if start %}&start={{ start }}{% endif %}{% if end %}&end={{ end }}{% endif %}"
-                       class="txn-btn txn-btn-ghost">← Previous</a>
-                {% endif %}
-                <span class="txn-page-info">
-                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-                </span>
-                {% if page_obj.has_next %}
-                    <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if type %}&type={{ type }}{% endif %}{% if category_id %}&category={{ category_id }}{% endif %}{% if start %}&start={{ start }}{% endif %}{% if end %}&end={{ end }}{% endif %}"
-                       class="txn-btn txn-btn-ghost">Next →</a>
-                {% endif %}
             </div>
-        {% endif %}
-    {% else %}
-        <div class="empty-state">
-            <div class="empty-icon">💸</div>
-            <h2>No transactions found</h2>
-            <p>Try adjusting your filters or add your first transaction.</p>
-            <a href="{% url 'finance:transaction_create' %}" class="btn btn-primary">+ Add transaction</a>
+            <div class="tx5-row-cur">{{ t.currency.flag|default:"🏳️" }} {{ t.currency.code|default:"—" }}</div>
+            <div class="tx5-row-amt {% if t.type == 'income' %}pos{% else %}neg{% endif %}">
+                {% if t.type == 'income' %}＋{% else %}－{% endif %}{{ t.currency.symbol|default:"" }}{{ t.amount|floatformat:2 }}
+            </div>
+            <div class="tx5-row-actions">
+                <a href="{% url 'finance:transaction_update' t.pk %}">✏️</a>
+                <a href="{% url 'finance:transaction_delete' t.pk %}" class="del">🗑️</a>
+            </div>
         </div>
+        {% endfor %}
+    </div>
+
+    {% if is_paginated %}
+    <div class="txn-pagination">
+        {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if type %}&type={{ type }}{% endif %}{% if currency_code %}&currency={{ currency_code }}{% endif %}" class="txn-btn txn-btn-ghost">← Prev</a>{% endif %}
+        <span class="txn-page-info">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if type %}&type={{ type }}{% endif %}{% if currency_code %}&currency={{ currency_code }}{% endif %}" class="txn-btn txn-btn-ghost">Next →</a>{% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="empty-state"><div class="empty-icon">💸</div><h2>No transactions</h2><p>Adjust filters or add one.</p><a href="{% url 'finance:transaction_create' %}" class="tx5-btn tx5-btn-dark">+ Add</a></div>
     {% endif %}
 </div>
 {% endblock %}

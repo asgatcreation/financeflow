@@ -1,0 +1,130 @@
+{% extends "base_app.html" %}
+{% block title %}{{ currency.code }} · FinanceFlow{% endblock %}
+
+{% block content %}
+<div class="app-content">
+
+    <nav class="cd2-crumb">
+        <a href="{% url 'finance:transactions' %}">Statement</a>
+        <span>/</span>
+        <span class="cd2-crumb-cur">{{ currency.flag }} {{ currency.code }}</span>
+    </nav>
+
+    <header class="cd2-header">
+        <div class="cd2-header-left">
+            <div class="cd2-flag">{{ currency.flag }}</div>
+            <div>
+                <h1>{{ currency.name }}</h1>
+                <p class="cd2-sub">{{ count }} transaction{{ count|pluralize }} · {{ currency.symbol }}{{ currency.code }}</p>
+            </div>
+        </div>
+        <a href="{% url 'finance:transactions' %}" class="bn-btn" style="background:var(--surface); color:var(--text) !important; border-color:var(--border-strong);">← Back</a>
+    </header>
+
+    <!-- SUMMARY -->
+    <div class="cd2-summary">
+        <div class="cd2-summary-card">
+            <div class="cd2-sum-label">Total In</div>
+            <div class="cd2-sum-val pos">＋{{ currency.symbol }}{{ income|floatformat:2 }}</div>
+        </div>
+        <div class="cd2-summary-card">
+            <div class="cd2-sum-label">Total Out</div>
+            <div class="cd2-sum-val neg">－{{ currency.symbol }}{{ expense|floatformat:2 }}</div>
+        </div>
+        <div class="cd2-summary-card cd2-summary-net">
+            <div class="cd2-sum-label">Net Balance</div>
+            <div class="cd2-sum-val {% if net >= 0 %}pos{% else %}neg{% endif %}">
+                {% if net < 0 %}−{% endif %}{{ currency.symbol }}{{ net|floatformat:2|cut:"-" }}
+            </div>
+        </div>
+    </div>
+
+    {% if cat_breakdown %}
+    <div class="cd2-cats">
+        <div class="cd2-section-label">Top categories</div>
+        <div class="cd2-cats-grid">
+            {% for c in cat_breakdown %}
+            <div class="cd2-cat">
+                <div class="cd2-cat-icon" style="background:{{ c.category__color|default:'#6366f1' }}15; color:{{ c.category__color|default:'#6366f1' }};">{{ c.category__icon|default:"💳" }}</div>
+                <div class="cd2-cat-body">
+                    <div class="cd2-cat-name">{{ c.category__name|default:"Uncategorized" }}</div>
+                    <div class="cd2-cat-amt">{{ currency.symbol }}{{ c.total|floatformat:2 }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- TOOLBAR -->
+    <div class="cd2-toolbar">
+        <div class="cd2-toolbar-label">Transactions</div>
+        <form method="get" class="cd2-sort">
+            <label>Sort:</label>
+            <select name="sort" onchange="this.form.submit()">
+                <option value="newest" {% if sort == "newest" %}selected{% endif %}>Newest</option>
+                <option value="oldest" {% if sort == "oldest" %}selected{% endif %}>Oldest</option>
+                <option value="highest" {% if sort == "highest" %}selected{% endif %}>Highest</option>
+                <option value="lowest" {% if sort == "lowest" %}selected{% endif %}>Lowest</option>
+                <option value="category" {% if sort == "category" %}selected{% endif %}>Category</option>
+            </select>
+        </form>
+    </div>
+
+    <!-- LEDGER -->
+    {% if transactions %}
+    <div class="cd2-ledger">
+        {% for t in transactions %}
+        <div class="cd2-row {% if t.type == 'income' %}cd2-row-in{% else %}cd2-row-out{% endif %}">
+            <div class="cd2-row-icon" style="background:{{ t.category.color|default:'#6366f1' }}15; color:{{ t.category.color|default:'#6366f1' }};">{{ t.category.icon|default:"💳" }}</div>
+            <div class="cd2-row-body">
+                <div class="cd2-row-desc">{{ t.description }}</div>
+                <div class="cd2-row-meta">
+                    <span>{{ t.category.name|default:"Uncategorized" }}</span>
+                    <span>·</span>
+                    <span>{{ t.date|date:"M d, Y" }}</span>
+                </div>
+            </div>
+            <div class="cd2-row-amt {% if t.type == 'income' %}pos{% else %}neg{% endif %}">
+                {% if t.type == 'income' %}＋{% else %}－{% endif %}{{ currency.symbol }}{{ t.amount|floatformat:2 }}
+            </div>
+            <div class="cd2-row-actions">
+                <a href="{% url 'finance:transaction_update' t.pk %}">✏️</a>
+                <a href="{% url 'finance:transaction_delete' t.pk %}" class="del">🗑️</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- PAGINATION -->
+    {% if page_obj.has_other_pages %}
+    <div class="cd2-pagination">
+        {% if page_obj.has_previous %}
+            <a href="?sort={{ sort }}&page={{ page_obj.previous_page_number }}" class="cd2-page-btn">← Prev</a>
+        {% else %}
+            <span class="cd2-page-btn cd2-page-disabled">← Prev</span>
+        {% endif %}
+
+        <div class="cd2-page-numbers">
+            {% for num in page_obj.paginator.page_range %}
+                {% if num == page_obj.number %}
+                    <span class="cd2-page-num cd2-page-num-active">{{ num }}</span>
+                {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+                    <a href="?sort={{ sort }}&page={{ num }}" class="cd2-page-num">{{ num }}</a>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        {% if page_obj.has_next %}
+            <a href="?sort={{ sort }}&page={{ page_obj.next_page_number }}" class="cd2-page-btn">Next →</a>
+        {% else %}
+            <span class="cd2-page-btn cd2-page-disabled">Next →</span>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="empty-state"><div class="empty-icon">💸</div><h2>No {{ currency.code }} transactions yet</h2><p>Add one to get started.</p></div>
+    {% endif %}
+</div>
+{% endblock %}

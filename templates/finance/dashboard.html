@@ -3,311 +3,313 @@
 
 {% block content %}
 <div class="app-content">
-    <header class="page-header">
-        <div>
-            <h1>Hey, {{ user.username }} 👋</h1>
-            <p class="subtitle">{{ now_month }} · <a href="{% url 'finance:currencies' %}">Manage currencies</a></p>
-        </div>
-        <div class="page-header-actions">
-            <a href="{% url 'finance:transaction_create' %}" class="btn btn-primary">+ Add transaction</a>
-        </div>
-    </header>
 
-    <!-- KPI CARDS -->
+    <!-- GREETING -->
+    <div class="d7-head">
+        <div>
+            <h1>Welcome back, {{ user.username|title }}<span class="d7-dot">.</span></h1>
+            <p class="d7-sub">{{ now_month }} · {{ per_currency|length }} currencies · {{ budgets|length }} active budgets</p>
+        </div>
+        <a href="{% url 'finance:transaction_create' %}" class="d7-new">＋ New transaction</a>
+    </div>
+
     {% if no_currencies %}
     <div class="empty-state">
         <div class="empty-icon">💱</div>
-        <h2>Add a currency to get started</h2>
-        <p>FinanceFlow tracks each currency separately. Add your first currency to begin.</p>
-        <a href="{% url 'finance:currencies' %}" class="btn btn-primary">Add currency</a>
+        <h2>Add your first currency</h2>
+        <a href="{% url 'finance:currencies' %}" class="d7-new" style="margin:0 auto;">Add currency</a>
     </div>
-{% else %}
-    <section class="currency-grid">
-        {% for row in per_currency %}
-            <div class="currency-card {% if row.is_primary %}primary{% endif %}">
-                <div class="currency-card-head">
-                    <div class="currency-card-flag">{{ row.currency.flag }}</div>
+    {% else %}
+
+    <!-- COMPACT KPI STRIP -->
+    <section class="d7-kpis">
+        {% for row in per_currency %}{% if row.is_primary %}
+        <div class="d7-kpi d7-kpi-dark">
+            <div class="d7-kpi-label">{{ row.currency.flag }} {{ row.currency.code }} · Primary</div>
+            <div class="d7-kpi-value">{{ row.currency.symbol }}{{ row.balance|floatformat:0 }}</div>
+            <div class="d7-kpi-foot">
+                <span class="pos">＋{{ row.currency.symbol }}{{ row.total_income|floatformat:0 }}</span>
+                <span class="neg">－{{ row.currency.symbol }}{{ row.total_expense|floatformat:0 }}</span>
+            </div>
+        </div>
+        {% endif %}{% endfor %}
+
+        <div class="d7-kpi">
+            <div class="d7-kpi-label">Income · this month</div>
+            <div class="d7-kpi-value pos">＋{{ chart_currency.symbol }}{{ per_currency.0.m_income|floatformat:0 }}</div>
+            <div class="d7-kpi-foot">{{ chart_currency.code }}</div>
+        </div>
+
+        <div class="d7-kpi">
+            <div class="d7-kpi-label">Expenses · this month</div>
+            <div class="d7-kpi-value neg">－{{ chart_currency.symbol }}{{ per_currency.0.m_expense|floatformat:0 }}</div>
+            <div class="d7-kpi-foot">{{ chart_currency.code }}</div>
+        </div>
+
+        <div class="d7-kpi">
+            <div class="d7-kpi-label">Net · this month</div>
+            <div class="d7-kpi-value {% if per_currency.0.m_net >= 0 %}pos{% else %}neg{% endif %}">
+                {% if per_currency.0.m_net < 0 %}－{% else %}＋{% endif %}{{ chart_currency.symbol }}{{ per_currency.0.m_net|floatformat:0|cut:"-" }}
+            </div>
+            <div class="d7-kpi-foot">{{ chart_currency.code }}</div>
+        </div>
+    </section>
+
+    <!-- MAIN CHART — with indexed/absolute toggle -->
+    <section class="d7-chart-card">
+        <div class="d7-chart-head">
+            <div>
+                <div class="d7-chart-title">Net trend</div>
+                <div class="d7-chart-sub" id="chartMode">Last 6 months · absolute values</div>
+            </div>
+            <div class="d7-mode-switch">
+                <button type="button" class="d7-mode-btn d7-mode-active" data-mode="absolute" onclick="switchChartMode('absolute')">Absolute</button>
+                <button type="button" class="d7-mode-btn" data-mode="indexed" onclick="switchChartMode('indexed')">Indexed (comparable)</button>
+            </div>
+        </div>
+        <div class="d7-chart-box"><canvas id="mainChart"></canvas></div>
+    </section>
+
+    <!-- CURRENCY LIST — compact rows -->
+    <section class="d7-currencies">
+        <div class="d7-currencies-head">
+            <div class="d7-currencies-title">All currencies</div>
+            <a href="{% url 'finance:currencies' %}" class="d7-link">Manage →</a>
+        </div>
+
+        <div class="d7-curr-table">
+            <div class="d7-curr-head-row">
+                <span>Currency</span>
+                <span>Trend</span>
+                <span class="d7-align-right">IN</span>
+                <span class="d7-align-right">OUT</span>
+                <span class="d7-align-right">NET</span>
+                <span></span>
+            </div>
+            {% for row in per_currency %}
+            <a href="{% url 'finance:currency_detail' row.currency.code %}" class="d7-curr-row">
+                <div class="d7-curr-name-cell">
+                    <span class="d7-curr-flag">{{ row.currency.flag }}</span>
                     <div>
-                        <div class="currency-card-code">
-                            {{ row.currency.code }}
-                            {% if row.is_primary %}<span class="tag-primary" style="margin-left:0.5rem;">Primary</span>{% endif %}
-                        </div>
-                        <div class="currency-card-name">{{ row.currency.name }}</div>
+                        <div class="d7-curr-code">{{ row.currency.code }}{% if row.is_primary %} <span class="d7-star">⭐</span>{% endif %}</div>
+                        <div class="d7-curr-fullname">{{ row.currency.name }}</div>
                     </div>
                 </div>
-                <div class="currency-card-balance">
-                    {{ row.currency.symbol }}{{ row.balance|floatformat:2 }}
+                <div class="d7-curr-spark"><canvas class="spark" data-code="{{ row.currency.code }}" height="32"></canvas></div>
+                <div class="d7-curr-num pos">＋{{ row.currency.symbol }}{{ row.total_income|floatformat:0 }}</div>
+                <div class="d7-curr-num neg">－{{ row.currency.symbol }}{{ row.total_expense|floatformat:0 }}</div>
+                <div class="d7-curr-num d7-curr-net {% if row.balance >= 0 %}pos{% else %}neg{% endif %}">
+                    {% if row.balance < 0 %}－{% else %}＋{% endif %}{{ row.currency.symbol }}{{ row.balance|floatformat:0|cut:"-" }}
                 </div>
-                <div class="currency-card-stats">
-                    <div class="currency-stat">
-                        <span class="currency-stat-label">Income (mo)</span>
-                        <span class="currency-stat-value pos">{{ row.currency.symbol }}{{ row.m_income|floatformat:2 }}</span>
-                    </div>
-                    <div class="currency-stat">
-                        <span class="currency-stat-label">Expense (mo)</span>
-                        <span class="currency-stat-value neg">{{ row.currency.symbol }}{{ row.m_expense|floatformat:2 }}</span>
-                    </div>
-                </div>
-            </div>
-        {% endfor %}
-    </section>
-{% endif %}
-
-    
-    
-    <!-- CHARTS ROW -->
-    <!-- CURRENCY SELECTOR -->
-<div class="chart-currency-bar">
-    <span class="chart-currency-label">📊 Charts currency:</span>
-    <div class="chart-currency-tabs">
-        {% for uc in user_currencies %}
-            <a href="?chart={{ uc.code }}"
-               class="chart-currency-tab {% if chart_currency.code == uc.code %}active{% endif %}">
-                {{ uc.flag }} {{ uc.code }}
+                <div class="d7-curr-arrow">→</div>
             </a>
-        {% endfor %}
-    </div>
-</div>
-
-<!-- CHARTS -->
-<section class="charts-grid">
-    <div class="panel panel-chart">
-        <div class="panel-header">
-            <h2>📈 Income vs Expense</h2>
-            <span class="panel-hint">{{ chart_currency.code }} · Last 6 months</span>
-        </div>
-        <div class="chart-wrap">
-            <canvas id="trendChart"></canvas>
-        </div>
-    </div>
-
-    <div class="panel panel-chart">
-        <div class="panel-header">
-            <h2>🥧 Spending by category</h2>
-            <span class="panel-hint">{{ now_month }} · {{ chart_currency.code }}</span>
-        </div>
-        <div class="chart-wrap">
-            <canvas id="categoryChart"></canvas>
-        </div>
-    </div>
-</section>
-
-<section class="charts-grid">
-    <div class="panel panel-chart">
-        <div class="panel-header">
-            <h2>💰 Income sources</h2>
-            <span class="panel-hint">{{ now_month }} · {{ chart_currency.code }}</span>
-        </div>
-        <div class="chart-wrap">
-            <canvas id="incomeChart"></canvas>
-        </div>
-    </div>
-
-    <div class="panel panel-chart">
-        <div class="panel-header">
-            <h2>📊 Net savings rate</h2>
-            <span class="panel-hint">{{ chart_currency.code }}</span>
-        </div>
-        <div class="chart-wrap">
-            <canvas id="savingsChart"></canvas>
-        </div>
-    </div>
-</section>
-
-    <!-- BOTTOM ROW -->
-    <section class="dashboard-lower">
-        <div class="panel">
-            <div class="panel-header">
-                <h2>🕓 Recent transactions</h2>
-                <a href="{% url 'finance:transactions' %}" class="link">View all →</a>
-            </div>
-            {% if recent %}
-                <ul class="tx-list">
-                    {% for t in recent %}
-                        <li class="tx-row">
-                            <div class="tx-icon" style="background:{{ t.category.color|default:'#6366f1' }}20; color:{{ t.category.color|default:'#6366f1' }}">
-                                {{ t.category.icon|default:"💳" }}
-                            </div>
-                            <div class="tx-content">
-                                <div class="tx-title">{{ t.description }}</div>
-                                <div class="tx-meta">{{ t.category.name|default:"Uncategorized" }} · {{ t.date|date:"M d" }}</div>
-                            </div>
-                            <div class="tx-amount {% if t.type == 'income' %}pos{% else %}neg{% endif %}">
-                                {% if t.type == 'income' %}+{% else %}−{% endif %}{{ t.currency.symbol|default:"$" }}{{ t.amount|floatformat:2 }}
-                            </div>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p class="empty">No transactions yet. <a href="{% url 'finance:transaction_create' %}">Add your first →</a></p>
-            {% endif %}
-        </div>
-
-        <div class="panel">
-            <div class="panel-header">
-                <h2>🎯 Budgets · {{ now_month }}</h2>
-                <a href="{% url 'finance:budgets' %}" class="link">Manage →</a>
-            </div>
-            {% if budgets %}
-                <ul class="budget-list">
-                    {% for b in budgets %}
-                        <li class="budget-row">
-                            <div class="budget-head">
-                                <span>
-                                    <span class="budget-icon">{{ b.category.icon }}</span>
-                                    {{ b.category.name }}
-                                </span>
-                                <span class="budget-figures">
-                                    ${{ b.spent|floatformat:2 }} / ${{ b.amount|floatformat:2 }}
-                                </span>
-                            </div>
-                            <div class="progress-bar {% if b.is_over %}over{% elif b.is_warning %}warn{% endif %}">
-                                <div class="progress-fill" style="width:{{ b.percent_used }}%; background:{% if b.is_over %}var(--danger){% elif b.is_warning %}var(--warning){% else %}{{ b.category.color }}{% endif %}"></div>
-                            </div>
-                            <div class="budget-foot">
-                                {% if b.is_over %}
-                                    <span class="budget-status over">Over by ${{ b.remaining|floatformat:2|slice:"1:" }}</span>
-                                {% elif b.is_warning %}
-                                    <span class="budget-status warn">{{ b.percent_used }}% used — close to limit</span>
-                                {% else %}
-                                    <span class="budget-status">{{ b.percent_used }}% used · ${{ b.remaining|floatformat:2 }} left</span>
-                                {% endif %}
-                            </div>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p class="empty">No budgets set for this month. <a href="{% url 'finance:budget_create' %}">Create one →</a></p>
-            {% endif %}
+            {% endfor %}
         </div>
     </section>
+
+    <!-- DEEP DIVE -->
+    <section class="d7-deep">
+        <div class="d7-deep-head">
+            <div class="d7-deep-title">Deep dive</div>
+            <div class="d7-deep-tabs">
+                {% for uc in user_currencies %}
+                    <a href="?chart={{ uc.currency.code }}" class="d7-deep-tab {% if chart_currency.code == uc.currency.code %}d7-deep-tab-active{% endif %}">
+                        <span class="d7-deep-tab-flag">{{ uc.currency.flag }}</span>
+                        <span class="d7-deep-tab-code">{{ uc.currency.code }}</span>
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="d7-deep-grid">
+            <div class="d7-mini">
+                <div class="d7-mini-head"><span>Income vs Expense</span><span class="d7-mini-hint">{{ chart_currency.symbol }} {{ chart_currency.code }}</span></div>
+                <div class="d7-mini-canvas"><canvas id="trendChart"></canvas></div>
+            </div>
+            <div class="d7-mini">
+                <div class="d7-mini-head"><span>Spending</span><span class="d7-mini-hint">{{ now_month }}</span></div>
+                <div class="d7-mini-canvas"><canvas id="categoryChart"></canvas></div>
+            </div>
+            <div class="d7-mini">
+                <div class="d7-mini-head"><span>Income</span><span class="d7-mini-hint">{{ now_month }}</span></div>
+                <div class="d7-mini-canvas"><canvas id="incomeChart"></canvas></div>
+            </div>
+            <div class="d7-mini">
+                <div class="d7-mini-head"><span>In / Out / Net</span><span class="d7-mini-hint">6mo</span></div>
+                <div class="d7-mini-canvas"><canvas id="savingsChart"></canvas></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- BOTTOM -->
+    <section class="d7-bottom">
+        <div class="d7-panel">
+            <div class="d7-panel-head"><span>Recent activity</span><a href="{% url 'finance:transactions' %}" class="d7-link">View all →</a></div>
+            {% if recent %}
+                <div class="d7-recent">
+                    {% for t in recent %}
+                    <div class="d7-recent-row">
+                        <div class="d7-recent-icon" style="background:{{ t.category.color|default:'#6366f1' }}15; color:{{ t.category.color|default:'#6366f1' }};">{{ t.category.icon|default:"💳" }}</div>
+                        <div class="d7-recent-info">
+                            <div class="d7-recent-desc">{{ t.description }}</div>
+                            <div class="d7-recent-meta">{{ t.category.name|default:"Uncategorized" }} · {{ t.date|date:"M d" }}</div>
+                        </div>
+                        <div class="d7-recent-amt {% if t.type == 'income' %}pos{% else %}neg{% endif %}">
+                            {% if t.type == 'income' %}＋{% else %}－{% endif %}{{ t.currency.symbol|default:"" }}{{ t.amount|floatformat:2 }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}<p class="empty">No transactions.</p>{% endif %}
+        </div>
+
+        <div class="d7-panel">
+            <div class="d7-panel-head"><span>Budgets · {{ now_month }}</span><a href="{% url 'finance:budgets' %}" class="d7-link">Manage →</a></div>
+            {% if budgets %}
+                <div class="d7-budgets">
+                    {% for b in budgets|slice:":6" %}
+                    <div class="d7-budget">
+                        <div class="d7-budget-head">
+                            <span class="d7-budget-name">{{ b.category.icon }} {{ b.category.name }}</span>
+                            <span class="d7-budget-fig">{{ b.currency.symbol }}{{ b.spent|floatformat:0 }}/{{ b.currency.symbol }}{{ b.amount|floatformat:0 }}</span>
+                        </div>
+                        <div class="d7-budget-bar"><div class="d7-budget-fill" style="width:{{ b.percent_used }}%; background:{% if b.is_over %}var(--expense){% elif b.is_warning %}var(--warning){% else %}{{ b.category.color }}{% endif %};"></div></div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}<p class="empty">No budgets.</p>{% endif %}
+        </div>
+    </section>
+
+    {% endif %}
 </div>
 {% endblock %}
 
 {% block extra_js %}
+{% if not no_currencies %}
 <script>
-    const chartSymbol = "{{ chart_currency.symbol|default:'$' }}";
+    const sym = "{{ chart_currency.symbol|default:'' }}";
+    const code = "{{ chart_currency.code|default:'' }}";
     const labels = {{ chart_labels|safe }};
     const incomeData = {{ chart_income|safe }};
     const expenseData = {{ chart_expense|safe }};
+    const allSeries = {{ all_currency_series|safe }};
 
     Chart.defaults.color = '#64748b';
     Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
     Chart.defaults.font.weight = '600';
 
-    // ── Trend line chart ──
+    // ── Sparklines on currency rows ──
+    document.querySelectorAll('.spark').forEach(canvas => {
+        const cc = canvas.dataset.code;
+        const s = allSeries.find(x => x.code === cc);
+        if (!s) return;
+        new Chart(canvas, {
+            type: 'line',
+            data: { labels: labels, datasets: [{ data: s.net_series, borderColor: s.color, backgroundColor: 'transparent', tension: 0.4, borderWidth: 2, pointRadius: 0, pointHoverRadius: 3 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false } }, elements: { line: { capBezierPoints: false } } }
+        });
+    });
+
+    // ── Main chart with ABSOLUTE / INDEXED modes ──
+    let mainChart;
+    function buildAbsolute() {
+        return allSeries.map(c => ({
+            label: `${c.flag} ${c.code}`,
+            data: c.net_series,
+            borderColor: c.color,
+            backgroundColor: c.color + '10',
+            tension: 0.4, fill: false, borderWidth: 2.5,
+            pointRadius: 4, pointHoverRadius: 7,
+            pointBackgroundColor: c.color, pointBorderColor: '#fff', pointBorderWidth: 2,
+        }));
+    }
+    function buildIndexed() {
+        return allSeries.map(c => {
+            const s = c.net_series;
+            const base = s.find(v => v !== 0) ?? s[0] ?? 1;
+            const indexed = s.map(v => base === 0 ? 0 : ((v / Math.abs(base)) * 100).toFixed(1));
+            return {
+                label: `${c.flag} ${c.code}`,
+                data: indexed.map(Number),
+                borderColor: c.color,
+                backgroundColor: c.color + '10',
+                tension: 0.4, fill: false, borderWidth: 2.5,
+                pointRadius: 4, pointHoverRadius: 7,
+                pointBackgroundColor: c.color, pointBorderColor: '#fff', pointBorderWidth: 2,
+            };
+        });
+    }
+
+    function renderChart(mode) {
+        if (mainChart) mainChart.destroy();
+        const datasets = mode === 'indexed' ? buildIndexed() : buildAbsolute();
+        mainChart = new Chart(document.getElementById('mainChart'), {
+            type: 'line',
+            data: { labels: labels, datasets: datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 12, padding: 14, font: { size: 12, weight: '700' }, usePointStyle: true, pointStyle: 'line' } },
+                    tooltip: {
+                        backgroundColor: '#0f172a', padding: 14, cornerRadius: 12, titleFont: { size: 12, weight: '700' }, bodyFont: { size: 12 },
+                        callbacks: {
+                            label: ctx => {
+                                const v = ctx.parsed.y;
+                                return mode === 'indexed'
+                                    ? `  ${ctx.dataset.label}: ${v}%`
+                                    : `  ${ctx.dataset.label}: ${v.toLocaleString()}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+                    y: {
+                        grid: { color: 'rgba(148,163,184,0.08)' },
+                        ticks: {
+                            font: { size: 11 },
+                            callback: v => mode === 'indexed' ? v + '%' : v.toLocaleString()
+                        }
+                    }
+                }
+            }
+        });
+        document.getElementById('chartMode').textContent = mode === 'indexed'
+            ? 'Last 6 months · normalized to 100 (comparable across currencies)'
+            : 'Last 6 months · absolute values (mixing currencies — for reference only)';
+        document.querySelectorAll('.d7-mode-btn').forEach(b => b.classList.toggle('d7-mode-active', b.dataset.mode === mode));
+    }
+
+    window.switchChartMode = function(mode) { renderChart(mode); };
+    renderChart('indexed');
+
+    // ── Deep-dive charts ──
     new Chart(document.getElementById('trendChart'), {
         type: 'line',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Income',
-                    data: incomeData,
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16,185,129,0.12)',
-                    tension: 0.4, fill: true, borderWidth: 3,
-                    pointRadius: 5, pointBackgroundColor: '#10b981',
-                    pointBorderColor: '#fff', pointBorderWidth: 2,
-                },
-                {
-                    label: 'Expense',
-                    data: expenseData,
-                    borderColor: '#f43f5e',
-                    backgroundColor: 'rgba(244,63,94,0.10)',
-                    tension: 0.4, fill: true, borderWidth: 3,
-                    pointRadius: 5, pointBackgroundColor: '#f43f5e',
-                    pointBorderColor: '#fff', pointBorderWidth: 2,
-                }
-            ]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'top', labels: { boxWidth: 12, padding: 16, font: { size: 12 } } },
-                tooltip: {
-                    backgroundColor: '#0f172a', padding: 12, cornerRadius: 8,
-                    callbacks: { label: ctx => `${ctx.dataset.label}: ${chartSymbol}${ctx.parsed.y.toLocaleString()}` }
-                }
-            },
-            scales: {
-                x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-                y: { grid: { color: 'rgba(148,163,184,0.1)' }, ticks: { callback: v => chartSymbol + v.toLocaleString(), font: { size: 11 } } }
-            }
-        }
+        data: { labels: labels, datasets: [
+            { label: 'In', data: incomeData, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.12)', tension: 0.4, fill: true, borderWidth: 2.5, pointRadius: 3 },
+            { label: 'Out', data: expenseData, borderColor: '#f43f5e', backgroundColor: 'rgba(244,63,94,0.1)', tension: 0.4, fill: true, borderWidth: 2.5, pointRadius: 3 }
+        ] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
     });
 
-    // ── Expense donut ──
-    const expData = {{ cat_data|safe }};
-    const expLabels = {{ cat_labels|safe }};
-    const expColors = {{ cat_colors|safe }};
-    if (expData.length) {
-        new Chart(document.getElementById('categoryChart'), {
-            type: 'doughnut',
-            data: { labels: expLabels, datasets: [{ data: expData, backgroundColor: expColors, borderColor: '#fff', borderWidth: 3, hoverOffset: 10 }] },
-            options: {
-                responsive: true, maintainAspectRatio: false, cutout: '68%',
-                plugins: {
-                    legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10, font: { size: 11 } } },
-                    tooltip: { backgroundColor: '#0f172a', padding: 12, cornerRadius: 8,
-                        callbacks: { label: c => `${c.label}: ${chartSymbol}${c.parsed.toLocaleString()}` } }
-                }
-            }
-        });
-    } else {
-        document.getElementById('categoryChart').parentElement.innerHTML =
-            '<p class="empty" style="padding:3rem 0;text-align:center;">No expenses this month yet.</p>';
-    }
+    const ed = {{ cat_data|safe }};
+    if (ed.length) new Chart(document.getElementById('categoryChart'), { type: 'doughnut', data: { labels: {{ cat_labels|safe }}, datasets: [{ data: ed, backgroundColor: {{ cat_colors|safe }}, borderColor: '#fff', borderWidth: 2, hoverOffset: 6 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } } } });
+    else document.getElementById('categoryChart').parentElement.innerHTML = '<p class="d7-empty">No expenses</p>';
 
-    // ── Income donut ──
-    const incData = {{ inc_cat_data|safe }};
-    const incLabels = {{ inc_cat_labels|safe }};
-    const incColors = {{ inc_cat_colors|safe }};
-    if (incData.length) {
-        new Chart(document.getElementById('incomeChart'), {
-            type: 'doughnut',
-            data: { labels: incLabels, datasets: [{ data: incData, backgroundColor: incColors, borderColor: '#fff', borderWidth: 3, hoverOffset: 10 }] },
-            options: {
-                responsive: true, maintainAspectRatio: false, cutout: '68%',
-                plugins: {
-                    legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10, font: { size: 11 } } },
-                    tooltip: { backgroundColor: '#0f172a', padding: 12, cornerRadius: 8,
-                        callbacks: { label: c => `${c.label}: ${chartSymbol}${c.parsed.toLocaleString()}` } }
-                }
-            }
-        });
-    } else {
-        document.getElementById('incomeChart').parentElement.innerHTML =
-            '<p class="empty" style="padding:3rem 0;text-align:center;">No income this month yet.</p>';
-    }
+    const id = {{ inc_cat_data|safe }};
+    if (id.length) new Chart(document.getElementById('incomeChart'), { type: 'doughnut', data: { labels: {{ inc_cat_labels|safe }}, datasets: [{ data: id, backgroundColor: {{ inc_cat_colors|safe }}, borderColor: '#fff', borderWidth: 2, hoverOffset: 6 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } } } });
+    else document.getElementById('incomeChart').parentElement.innerHTML = '<p class="d7-empty">No income</p>';
 
-    // ── Savings bar chart ──
-    const totalIncome = incomeData.reduce((a, b) => a + b, 0);
-    const totalExpense = expenseData.reduce((a, b) => a + b, 0);
-    const net = totalIncome - totalExpense;
+    const totIn = incomeData.reduce((a,b)=>a+b,0);
+    const totOut = expenseData.reduce((a,b)=>a+b,0);
     new Chart(document.getElementById('savingsChart'), {
         type: 'bar',
-        data: {
-            labels: ['6-mo Income', '6-mo Expense', 'Net Saved'],
-            datasets: [{
-                data: [totalIncome, totalExpense, net],
-                backgroundColor: ['#10b981', '#f43f5e', net >= 0 ? '#0ea5e9' : '#f59e0b'],
-                borderRadius: 10,
-                barThickness: 48,
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: { backgroundColor: '#0f172a', padding: 12, cornerRadius: 8,
-                    callbacks: { label: c => `${chartSymbol}${c.parsed.y.toLocaleString()}` } }
-            },
-            scales: {
-                x: { grid: { display: false } },
-                y: { grid: { color: 'rgba(148,163,184,0.1)' }, ticks: { callback: v => chartSymbol + v.toLocaleString() } }
-            }
-        }
+        data: { labels: ['In','Out','Net'], datasets: [{ data: [totIn, totOut, totIn-totOut], backgroundColor: ['#10b981','#f43f5e', (totIn-totOut) >= 0 ? '#0ea5e9' : '#f59e0b'], borderRadius: 8, barThickness: 28 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
     });
 </script>
+{% endif %}
 {% endblock %}

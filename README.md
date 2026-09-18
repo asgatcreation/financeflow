@@ -95,6 +95,9 @@ It's a showcase of **full-stack Django**: authentication, per-user data isolatio
 ### 💸 Transactions — Per-Currency Totals, Live Filters
 ![Transactions](docs/screenshots/05-transactions.png)
 
+### 🔍 Currency Deep Dive — Filter, Sort, Paginate
+![Currency Detail](docs/screenshots/05b-currency-detail.png)
+
 ### 🎯 Budgets — Per-Category, Per-Currency Limits
 ![Budgets](docs/screenshots/06-budgets.png)
 
