@@ -229,5 +229,30 @@
             banner.style.display = 'none';
         }
     </script>
+
+    <div class="ios-install-banner" id="iosBanner" style="display:none;">
+        <span class="ios-install-icon">📲</span>
+        <div class="ios-install-text">
+            <strong>Install FinanceFlow</strong>
+            <span>Tap <strong>Share</strong> → <strong>Add to Home Screen</strong></span>
+        </div>
+        <button class="ios-install-close" id="iosClose" aria-label="Dismiss">✕</button>
+    </div>
+
+    <script>
+    (function(){
+        var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        var isStandalone = window.navigator.standalone === true;
+        var dismissed = localStorage.getItem('ios_banner_dismissed');
+        var banner = document.getElementById('iosBanner');
+        if (isIOS && !isStandalone && !dismissed && banner) {
+            banner.style.display = 'flex';
+        }
+        document.getElementById('iosClose')?.addEventListener('click', function(){
+            banner.style.display = 'none';
+            try { localStorage.setItem('ios_banner_dismissed','1'); } catch(e){}
+        });
+    })();
+    </script>
 </body>
 </html>
