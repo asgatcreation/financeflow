@@ -157,12 +157,16 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 "m_net": m_income - m_expense,
             })
 
-        # ── Charts use the primary currency only ──
-        primary = next((x for x in per_currency if x["is_primary"]), per_currency[0])
-        pc = primary["currency"]
+        
+        # ── Charts: allow currency switching via ?chart=CODE ──
+        chart_code = self.request.GET.get("chart", "").upper()
+        pc = next((c for c in user_currency_list if c.code == chart_code), None)
+        if not pc:
+            pc = next((x["currency"] for x in per_currency if x["is_primary"]), user_currency_list[0])
 
         labels, income, expense = monthly_series(user, 6, currency=pc)
         cat_labels, cat_data, cat_colors = category_breakdown(user, "expense", first, last, currency=pc)
+        inc_cat_labels, inc_cat_data, inc_cat_colors = category_breakdown(user, "income", first, last, currency=pc)
 
         recent = (
             Transaction.objects.filter(user=user, currency__in=currency_ids)
@@ -183,12 +187,18 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             "chart_labels": json.dumps(labels),
             "chart_income": json.dumps(income),
             "chart_expense": json.dumps(expense),
-            "cat_labels": json.dumps(cat_labels),
+                        "cat_labels": json.dumps(cat_labels),
             "cat_data": json.dumps(cat_data),
             "cat_colors": json.dumps(cat_colors),
+            "inc_cat_labels": json.dumps(inc_cat_labels),
+            "inc_cat_data": json.dumps(inc_cat_data),
+            "inc_cat_colors": json.dumps(inc_cat_colors),
+            "chart_currency": pc,
             "no_currencies": False,
         })
         return ctx
+
+
 
 
 class CurrenciesView(LoginRequiredMixin, View):
@@ -298,13 +308,40 @@ class TransactionListView(LoginRequiredMixin, ListView):
         ctx["category_id"] = self.request.GET.get("category", "")
         ctx["start"] = self.request.GET.get("start", "")
         ctx["end"] = self.request.GET.get("end", "")
-        # totals for filtered set
-        agg = self.get_queryset().aggregate(
-            inc=Sum("amount", filter=Q(type="income")),
-            exp=Sum("amount", filter=Q(type="expense")),
+
+        # Per-currency totals on the filtered set
+        agg = (
+            self.get_queryset()
+            .values("currency__code", "currency__symbol", "currency__flag", "type")
+            .annotate(total=Sum("amount"))
+            .order_by("currency__code")
         )
-        ctx["filtered_income"] = agg["inc"] or Decimal("0")
-        ctx["filtered_expense"] = agg["exp"] or Decimal("0")
+
+        # Build per-currency breakdown: [{code, symbol, flag, income, expense, net}]
+        by_currency = {}
+        for row in agg:
+            code = row["currency__code"] or "—"
+            if code not in by_currency:
+                by_currency[code] = {
+                    "code": code,
+                    "symbol": row["currency__symbol"] or "",
+                    "flag": row["currency__flag"] or "🏳️",
+                    "income": Decimal("0"),
+                    "expense": Decimal("0"),
+                }
+            if row["type"] == "income":
+                by_currency[code]["income"] += row["total"]
+            else:
+                by_currency[code]["expense"] += row["total"]
+
+        # Compute net
+        for v in by_currency.values():
+            v["net"] = v["income"] - v["expense"]
+
+        ctx["currency_totals"] = sorted(
+            by_currency.values(),
+            key=lambda x: (-(x["income"] + x["expense"]), x["code"])
+        )
         return ctx
 
 
@@ -371,19 +408,46 @@ class TransactionDeleteView(LoginRequiredMixin, DeleteView):
 
 class ExportCSVView(LoginRequiredMixin, View):
     def get(self, request):
-        qs = Transaction.objects.filter(user=request.user).select_related("category")
+        qs = (
+            Transaction.objects.filter(user=request.user)
+            .select_related("category", "currency")
+            .order_by("-date")
+        )
+
         response = HttpResponse(content_type="text/csv")
-        response["Content-Disposition"] = 'attachment; filename="transactions.csv"'
+        filename = f"financeflow_transactions_{date.today().isoformat()}.csv"
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+        # UTF-8 BOM so Excel opens it correctly with symbols like ₦, €, £
+        response.write("\ufeff")
+
         writer = csv.writer(response)
-        writer.writerow(["Date", "Type", "Amount", "Category", "Description", "Notes"])
+        writer.writerow([
+            "Date",
+            "Type",
+            "Amount",
+            "Currency Code",
+            "Currency Symbol",
+            "Category",
+            "Description",
+            "Notes",
+            "Created At",
+        ])
+
         for t in qs:
             writer.writerow([
-                t.date, t.type, t.amount,
-                t.category.name if t.category else "",
-                t.description, t.notes,
+                t.date.isoformat() if t.date else "",
+                t.type.capitalize(),
+                f"{t.amount:.2f}",
+                t.currency.code if t.currency else "",
+                t.currency.symbol if t.currency else "",
+                t.category.name if t.category else "Uncategorized",
+                t.description,
+                t.notes or "",
+                t.created_at.strftime("%Y-%m-%d %H:%M") if t.created_at else "",
             ])
-        return response
 
+        return response
 
 # ─────────────────────────────────────────────────────────
 # Categories
@@ -538,13 +602,46 @@ class ReportsView(LoginRequiredMixin, TemplateView):
             ctx["active_currency"] = None
             return ctx
 
-        # Currency selector
         code = self.request.GET.get("currency", "").upper()
         active = next((c for c in currency_list if c.code == code), currency_list[0])
 
         labels, income, expense = monthly_series(user, 12, currency=active)
         cat_labels, cat_data, cat_colors = category_breakdown(user, "expense", first, last, currency=active)
         inc_labels, inc_data, inc_colors = category_breakdown(user, "income", first, last, currency=active)
+
+        # ── Predictions: weighted moving average ──
+        income_nonzero = [x for x in income if x > 0]
+        expense_nonzero = [x for x in expense if x > 0]
+
+        def weighted_avg(series, weights=(0.5, 0.3, 0.2)):
+            if len(series) < len(weights):
+                return sum(series) / len(series) if series else 0
+            recent = series[-len(weights):]
+            return sum(v * w for v, w in zip(reversed(recent), weights))
+
+        pred_income = weighted_avg(income_nonzero) if income_nonzero else 0
+        pred_expense = weighted_avg(expense_nonzero) if expense_nonzero else 0
+        pred_net = pred_income - pred_expense
+
+        # ── Insights ──
+        current_income = income[-1] if income else 0
+        current_expense = expense[-1] if expense else 0
+        prev_income = income[-2] if len(income) > 1 else 0
+        prev_expense = expense[-2] if len(expense) > 1 else 0
+
+        income_delta = ((current_income - prev_income) / prev_income * 100) if prev_income > 0 else 0
+        expense_delta = ((current_expense - prev_expense) / prev_expense * 100) if prev_expense > 0 else 0
+
+        # Top spending category
+        top_cat_label = cat_labels[0] if cat_labels else "—"
+        top_cat_amount = cat_data[0] if cat_data else 0
+
+        # Savings rate
+        savings_rate = ((current_income - current_expense) / current_income * 100) if current_income > 0 else 0
+
+        # Average monthly expense
+        avg_expense = sum(expense) / len([e for e in expense if e > 0]) if any(e > 0 for e in expense) else 0
+        avg_income = sum(income) / len([i for i in income if i > 0]) if any(i > 0 for i in income) else 0
 
         ctx.update({
             "user_currencies": currency_list,
@@ -559,6 +656,25 @@ class ReportsView(LoginRequiredMixin, TemplateView):
             "inc_data": json.dumps(inc_data),
             "inc_colors": json.dumps(inc_colors),
             "now_month": today.strftime("%B %Y"),
+            "today": today,
             "no_currencies": False,
+            # Predictions
+            "pred_income": pred_income,
+            "pred_expense": pred_expense,
+            "pred_net": pred_net,
+            "pred_month": (today.replace(day=1) + timedelta(days=32)).replace(day=1).strftime("%B %Y"),
+            # Insights
+            "current_income": current_income,
+            "current_expense": current_expense,
+            "income_delta": income_delta,
+            "expense_delta": expense_delta,
+            "top_cat_label": top_cat_label,
+            "top_cat_amount": top_cat_amount,
+            "savings_rate": savings_rate,
+            "avg_expense": avg_expense,
+            "avg_income": avg_income,
         })
         return ctx
+
+
+

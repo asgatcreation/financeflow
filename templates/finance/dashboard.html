@@ -56,27 +56,63 @@
     
     
     <!-- CHARTS ROW -->
-    <section class="charts-grid">
-        <div class="panel panel-chart">
-            <div class="panel-header">
-                <h2>📈 Income vs Expense</h2>
-                <span class="panel-hint">Last 6 months</span>
-            </div>
-            <div class="chart-wrap">
-                <canvas id="trendChart"></canvas>
-            </div>
-        </div>
+    <!-- CURRENCY SELECTOR -->
+<div class="chart-currency-bar">
+    <span class="chart-currency-label">📊 Charts currency:</span>
+    <div class="chart-currency-tabs">
+        {% for uc in user_currencies %}
+            <a href="?chart={{ uc.code }}"
+               class="chart-currency-tab {% if chart_currency.code == uc.code %}active{% endif %}">
+                {{ uc.flag }} {{ uc.code }}
+            </a>
+        {% endfor %}
+    </div>
+</div>
 
-        <div class="panel panel-chart">
-            <div class="panel-header">
-                <h2>🥧 Spending by category</h2>
-                <span class="panel-hint">{{ now_month }}</span>
-            </div>
-            <div class="chart-wrap">
-                <canvas id="categoryChart"></canvas>
-            </div>
+<!-- CHARTS -->
+<section class="charts-grid">
+    <div class="panel panel-chart">
+        <div class="panel-header">
+            <h2>📈 Income vs Expense</h2>
+            <span class="panel-hint">{{ chart_currency.code }} · Last 6 months</span>
         </div>
-    </section>
+        <div class="chart-wrap">
+            <canvas id="trendChart"></canvas>
+        </div>
+    </div>
+
+    <div class="panel panel-chart">
+        <div class="panel-header">
+            <h2>🥧 Spending by category</h2>
+            <span class="panel-hint">{{ now_month }} · {{ chart_currency.code }}</span>
+        </div>
+        <div class="chart-wrap">
+            <canvas id="categoryChart"></canvas>
+        </div>
+    </div>
+</section>
+
+<section class="charts-grid">
+    <div class="panel panel-chart">
+        <div class="panel-header">
+            <h2>💰 Income sources</h2>
+            <span class="panel-hint">{{ now_month }} · {{ chart_currency.code }}</span>
+        </div>
+        <div class="chart-wrap">
+            <canvas id="incomeChart"></canvas>
+        </div>
+    </div>
+
+    <div class="panel panel-chart">
+        <div class="panel-header">
+            <h2>📊 Net savings rate</h2>
+            <span class="panel-hint">{{ chart_currency.code }}</span>
+        </div>
+        <div class="chart-wrap">
+            <canvas id="savingsChart"></canvas>
+        </div>
+    </div>
+</section>
 
     <!-- BOTTOM ROW -->
     <section class="dashboard-lower">
@@ -97,7 +133,7 @@
                                 <div class="tx-meta">{{ t.category.name|default:"Uncategorized" }} · {{ t.date|date:"M d" }}</div>
                             </div>
                             <div class="tx-amount {% if t.type == 'income' %}pos{% else %}neg{% endif %}">
-                                {% if t.type == 'income' %}+{% else %}−{% endif %}${{ t.amount|floatformat:2 }}
+                                {% if t.type == 'income' %}+{% else %}−{% endif %}{{ t.currency.symbol|default:"$" }}{{ t.amount|floatformat:2 }}
                             </div>
                         </li>
                     {% endfor %}
@@ -150,17 +186,17 @@
 
 {% block extra_js %}
 <script>
+    const chartSymbol = "{{ chart_currency.symbol|default:'$' }}";
     const labels = {{ chart_labels|safe }};
     const incomeData = {{ chart_income|safe }};
     const expenseData = {{ chart_expense|safe }};
 
-    Chart.defaults.color = '#94a3b8';
-    Chart.defaults.font.family = "'Inter', sans-serif";
-    Chart.defaults.font.weight = '500';
+    Chart.defaults.color = '#64748b';
+    Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+    Chart.defaults.font.weight = '600';
 
-    // Trend chart
-    const trendCtx = document.getElementById('trendChart');
-    new Chart(trendCtx, {
+    // ── Trend line chart ──
+    new Chart(document.getElementById('trendChart'), {
         type: 'line',
         data: {
             labels: labels,
@@ -169,87 +205,109 @@
                     label: 'Income',
                     data: incomeData,
                     borderColor: '#10b981',
-                    backgroundColor: 'rgba(16,185,129,0.15)',
-                    tension: 0.4,
-                    fill: true,
-                    borderWidth: 3,
-                    pointRadius: 4,
-                    pointBackgroundColor: '#10b981',
+                    backgroundColor: 'rgba(16,185,129,0.12)',
+                    tension: 0.4, fill: true, borderWidth: 3,
+                    pointRadius: 5, pointBackgroundColor: '#10b981',
+                    pointBorderColor: '#fff', pointBorderWidth: 2,
                 },
                 {
                     label: 'Expense',
                     data: expenseData,
-                    borderColor: '#ef4444',
-                    backgroundColor: 'rgba(239,68,68,0.15)',
-                    tension: 0.4,
-                    fill: true,
-                    borderWidth: 3,
-                    pointRadius: 4,
-                    pointBackgroundColor: '#ef4444',
+                    borderColor: '#f43f5e',
+                    backgroundColor: 'rgba(244,63,94,0.10)',
+                    tension: 0.4, fill: true, borderWidth: 3,
+                    pointRadius: 5, pointBackgroundColor: '#f43f5e',
+                    pointBorderColor: '#fff', pointBorderWidth: 2,
                 }
             ]
         },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
+            responsive: true, maintainAspectRatio: false,
             plugins: {
-                legend: { position: 'top', labels: { boxWidth: 12, padding: 16 } },
+                legend: { position: 'top', labels: { boxWidth: 12, padding: 16, font: { size: 12 } } },
                 tooltip: {
-                    backgroundColor: '#1e293b',
-                    borderColor: '#334155',
-                    borderWidth: 1,
-                    padding: 12,
-                    callbacks: {
-                        label: ctx => `${ctx.dataset.label}: $${ctx.parsed.y.toFixed(2)}`
-                    }
+                    backgroundColor: '#0f172a', padding: 12, cornerRadius: 8,
+                    callbacks: { label: ctx => `${ctx.dataset.label}: ${chartSymbol}${ctx.parsed.y.toLocaleString()}` }
                 }
             },
             scales: {
-                x: { grid: { color: 'rgba(148,163,184,0.08)' } },
-                y: {
-                    grid: { color: 'rgba(148,163,184,0.08)' },
-                    ticks: { callback: v => '$' + v }
-                }
+                x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+                y: { grid: { color: 'rgba(148,163,184,0.1)' }, ticks: { callback: v => chartSymbol + v.toLocaleString(), font: { size: 11 } } }
             }
         }
     });
 
-    // Category donut
-    const catLabels = {{ cat_labels|safe }};
-    const catData = {{ cat_data|safe }};
-    const catColors = {{ cat_colors|safe }};
-
-    const catCtx = document.getElementById('categoryChart');
-    if (catData.length) {
-        new Chart(catCtx, {
+    // ── Expense donut ──
+    const expData = {{ cat_data|safe }};
+    const expLabels = {{ cat_labels|safe }};
+    const expColors = {{ cat_colors|safe }};
+    if (expData.length) {
+        new Chart(document.getElementById('categoryChart'), {
             type: 'doughnut',
-            data: {
-                labels: catLabels,
-                datasets: [{
-                    data: catData,
-                    backgroundColor: catColors,
-                    borderColor: '#1e293b',
-                    borderWidth: 3,
-                    hoverOffset: 8,
-                }]
-            },
+            data: { labels: expLabels, datasets: [{ data: expData, backgroundColor: expColors, borderColor: '#fff', borderWidth: 3, hoverOffset: 10 }] },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '65%',
+                responsive: true, maintainAspectRatio: false, cutout: '68%',
                 plugins: {
-                    legend: { position: 'bottom', labels: { boxWidth: 10, padding: 12, font: { size: 12 } } },
-                    tooltip: {
-                        backgroundColor: '#1e293b',
-                        borderColor: '#334155',
-                        borderWidth: 1,
-                        callbacks: { label: ctx => `${ctx.label}: $${ctx.parsed.toFixed(2)}` }
-                    }
+                    legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10, font: { size: 11 } } },
+                    tooltip: { backgroundColor: '#0f172a', padding: 12, cornerRadius: 8,
+                        callbacks: { label: c => `${c.label}: ${chartSymbol}${c.parsed.toLocaleString()}` } }
                 }
             }
         });
     } else {
-        catCtx.parentElement.innerHTML = '<p class="empty" style="padding:3rem 0;text-align:center;">No expenses this month yet.</p>';
+        document.getElementById('categoryChart').parentElement.innerHTML =
+            '<p class="empty" style="padding:3rem 0;text-align:center;">No expenses this month yet.</p>';
     }
+
+    // ── Income donut ──
+    const incData = {{ inc_cat_data|safe }};
+    const incLabels = {{ inc_cat_labels|safe }};
+    const incColors = {{ inc_cat_colors|safe }};
+    if (incData.length) {
+        new Chart(document.getElementById('incomeChart'), {
+            type: 'doughnut',
+            data: { labels: incLabels, datasets: [{ data: incData, backgroundColor: incColors, borderColor: '#fff', borderWidth: 3, hoverOffset: 10 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false, cutout: '68%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10, font: { size: 11 } } },
+                    tooltip: { backgroundColor: '#0f172a', padding: 12, cornerRadius: 8,
+                        callbacks: { label: c => `${c.label}: ${chartSymbol}${c.parsed.toLocaleString()}` } }
+                }
+            }
+        });
+    } else {
+        document.getElementById('incomeChart').parentElement.innerHTML =
+            '<p class="empty" style="padding:3rem 0;text-align:center;">No income this month yet.</p>';
+    }
+
+    // ── Savings bar chart ──
+    const totalIncome = incomeData.reduce((a, b) => a + b, 0);
+    const totalExpense = expenseData.reduce((a, b) => a + b, 0);
+    const net = totalIncome - totalExpense;
+    new Chart(document.getElementById('savingsChart'), {
+        type: 'bar',
+        data: {
+            labels: ['6-mo Income', '6-mo Expense', 'Net Saved'],
+            datasets: [{
+                data: [totalIncome, totalExpense, net],
+                backgroundColor: ['#10b981', '#f43f5e', net >= 0 ? '#0ea5e9' : '#f59e0b'],
+                borderRadius: 10,
+                barThickness: 48,
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { backgroundColor: '#0f172a', padding: 12, cornerRadius: 8,
+                    callbacks: { label: c => `${chartSymbol}${c.parsed.y.toLocaleString()}` } }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: { grid: { color: 'rgba(148,163,184,0.1)' }, ticks: { callback: v => chartSymbol + v.toLocaleString() } }
+            }
+        }
+    });
 </script>
 {% endblock %}

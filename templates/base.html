@@ -12,6 +12,16 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
 </head>
 <body class="public-layout">
+    <!-- Page loader -->
+    <div class="page-loader" id="pageLoader">
+        <div class="page-loader-content">
+            <div class="page-loader-coin">₦</div>
+            <div class="page-loader-track">
+                <div class="page-loader-fill"></div>
+            </div>
+            <div class="page-loader-text">Loading FinanceFlow…</div>
+        </div>
+    </div>
 
     <nav class="public-nav">
         <div class="public-nav-inner">
@@ -99,5 +109,76 @@
 </script>
 {% endif %}
 
+    <style>
+        .page-loader {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.4s ease, visibility 0.4s ease;
+        }
+        .page-loader.hide { opacity: 0; visibility: hidden; }
+        .page-loader-content { display: flex; flex-direction: column; align-items: center; gap: 1.25rem; }
+        .page-loader-coin {
+            width: 72px; height: 72px; border-radius: 50%;
+            background: linear-gradient(135deg, #10b981, #34d399);
+            color: #fff; display: grid; place-items: center;
+            font-size: 2rem; font-weight: 800;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            box-shadow: 0 12px 32px rgba(16, 185, 129, 0.4);
+            animation: coinBounce 1s ease-in-out infinite;
+        }
+        @keyframes coinBounce {
+            0%, 100% { transform: translateY(0) rotateY(0deg); }
+            50%      { transform: translateY(-14px) rotateY(180deg); }
+        }
+        .page-loader-track { width: 200px; height: 4px; border-radius: 2px; background: #e2e8f0; overflow: hidden; }
+        .page-loader-fill {
+            height: 100%; width: 40%;
+            background: linear-gradient(90deg, #10b981, #0ea5e9);
+            border-radius: 2px;
+            animation: loaderSlide 1.2s ease-in-out infinite;
+        }
+        @keyframes loaderSlide {
+            0%   { transform: translateX(-100%); }
+            100% { transform: translateX(350%); }
+        }
+        .page-loader-text {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 0.82rem; font-weight: 600;
+            color: #64748b; letter-spacing: 0.02em;
+        }
+    </style>
+
+    <script>
+        (function () {
+            var loader = document.getElementById('pageLoader');
+            if (!loader) return;
+            function hide() {
+                loader.classList.add('hide');
+                setTimeout(function () { loader.style.display = 'none'; }, 450);
+            }
+            if (document.readyState === 'complete') {
+                hide();
+            } else {
+                window.addEventListener('load', hide);
+                setTimeout(hide, 3000);
+            }
+            document.querySelectorAll('a[href]:not([href^="#"]):not([target="_blank"])').forEach(function (link) {
+                link.addEventListener('click', function (e) {
+                    var href = link.getAttribute('href');
+                    if (!href || href.startsWith('javascript:') || href.startsWith('mailto:')) return;
+                    if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+                    e.preventDefault();
+                    document.body.style.transition = 'opacity 0.25s';
+                    document.body.style.opacity = '0';
+                    setTimeout(function () { window.location.href = href; }, 220);
+                });
+            });
+        })();
+    </script>
 </body>
 </html>

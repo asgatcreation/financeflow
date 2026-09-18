@@ -2,30 +2,159 @@
 {% block title %}Reports · FinanceFlow{% endblock %}
 
 {% block content %}
-<div class="app-content">
-    <header class="page-header">
+<div class="app-content" id="reportRoot">
+
+    <!-- HEADER -->
+    <header class="page-header no-print">
         <div>
-            <h1>Reports</h1>
-            <p class="subtitle">Trends and breakdowns across all your data.</p>
+            <h1>📈 Reports &amp; Insights</h1>
+            <p class="subtitle">
+                {% if active_currency %}
+                    All figures in {{ active_currency.flag }} {{ active_currency.code }} · {{ now_month }}
+                {% endif %}
+            </p>
+        </div>
+        <div class="page-header-actions">
+            <button type="button" class="btn btn-ghost" onclick="window.print()">🖨️ Export PDF</button>
         </div>
     </header>
 
-    <section class="charts-grid">
-        <div class="panel panel-chart">
-            <div class="panel-header">
-                <h2>📈 12-month trend</h2>
-                <span class="panel-hint">Income vs Expense</span>
+    {% if no_currencies %}
+        <div class="empty-state">
+            <div class="empty-icon">💱</div>
+            <h2>Add a currency to see reports</h2>
+            <p>Reports need at least one currency with transactions.</p>
+            <a href="{% url 'finance:currencies' %}" class="btn btn-primary">Add currency</a>
+        </div>
+    {% else %}
+
+    <!-- CURRENCY SELECTOR -->
+    <div class="chart-currency-bar no-print">
+        <span class="chart-currency-label">💱 Currency:</span>
+        <div class="chart-currency-tabs">
+            {% for c in user_currencies %}
+                <a href="?currency={{ c.code }}"
+                   class="chart-currency-tab {% if active_currency.code == c.code %}active{% endif %}">
+                    {{ c.flag }} {{ c.code }}
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- PRINT HEADER (only shows in PDF) -->
+    <div class="print-header">
+        <h1>FinanceFlow · Financial Report</h1>
+        <p>{{ active_currency.flag }} {{ active_currency.name }} ({{ active_currency.code }}) · Generated {{ today|date:"F d, Y" }}</p>
+    </div>
+
+    <!-- INSIGHTS ROW -->
+    <section class="insights-grid">
+        <div class="insight-card">
+            <div class="insight-icon">💡</div>
+            <div class="insight-body">
+                <div class="insight-label">Top spending category</div>
+                <div class="insight-value">{{ top_cat_label }}</div>
+                <div class="insight-sub">{{ active_currency.symbol }}{{ top_cat_amount|floatformat:2 }} this month</div>
             </div>
-            <div class="chart-wrap">
-                <canvas id="yearChart"></canvas>
+        </div>
+
+        <div class="insight-card">
+            <div class="insight-icon">📊</div>
+            <div class="insight-body">
+                <div class="insight-label">Avg monthly income</div>
+                <div class="insight-value">{{ active_currency.symbol }}{{ avg_income|floatformat:2 }}</div>
+                <div class="insight-sub">Based on active months</div>
+            </div>
+        </div>
+
+        <div class="insight-card">
+            <div class="insight-icon">📉</div>
+            <div class="insight-body">
+                <div class="insight-label">Avg monthly expense</div>
+                <div class="insight-value">{{ active_currency.symbol }}{{ avg_expense|floatformat:2 }}</div>
+                <div class="insight-sub">Based on active months</div>
+            </div>
+        </div>
+
+        <div class="insight-card {% if savings_rate >= 20 %}good{% elif savings_rate >= 0 %}warn{% else %}bad{% endif %}">
+            <div class="insight-icon">🎯</div>
+            <div class="insight-body">
+                <div class="insight-label">Savings rate</div>
+                <div class="insight-value">{{ savings_rate|floatformat:1 }}%</div>
+                <div class="insight-sub">
+                    {% if savings_rate >= 20 %}Excellent discipline
+                    {% elif savings_rate >= 10 %}Good, keep going
+                    {% elif savings_rate >= 0 %}Tight but positive
+                    {% else %}Spending exceeds income{% endif %}
+                </div>
             </div>
         </div>
     </section>
 
+    <!-- DELTA ROW -->
+    <section class="delta-row">
+        <div class="delta-card">
+            <span class="delta-label">Income this month</span>
+            <span class="delta-value">{{ active_currency.symbol }}{{ current_income|floatformat:2 }}</span>
+            <span class="delta-change {% if income_delta >= 0 %}up{% else %}down{% endif %}">
+                {% if income_delta >= 0 %}▲{% else %}▼{% endif %} {{ income_delta|floatformat:1 }}% vs last month
+            </span>
+        </div>
+        <div class="delta-card">
+            <span class="delta-label">Expenses this month</span>
+            <span class="delta-value">{{ active_currency.symbol }}{{ current_expense|floatformat:2 }}</span>
+            <span class="delta-change {% if expense_delta <= 0 %}up{% else %}down{% endif %}">
+                {% if expense_delta >= 0 %}▲{% else %}▼{% endif %} {{ expense_delta|floatformat:1 }}% vs last month
+            </span>
+        </div>
+    </section>
+
+    <!-- PREDICTIONS -->
+    <section class="predictions-panel">
+        <div class="predictions-header">
+            <h2>🔮 Prediction for {{ pred_month }}</h2>
+            <span class="panel-hint">Weighted moving average · 3-month window</span>
+        </div>
+        <div class="predictions-grid">
+            <div class="prediction-box">
+                <span class="prediction-label">Expected income</span>
+                <span class="prediction-value pos">{{ active_currency.symbol }}{{ pred_income|floatformat:2 }}</span>
+            </div>
+            <div class="prediction-box">
+                <span class="prediction-label">Expected expenses</span>
+                <span class="prediction-value neg">{{ active_currency.symbol }}{{ pred_expense|floatformat:2 }}</span>
+            </div>
+            <div class="prediction-box highlight">
+                <span class="prediction-label">Expected net</span>
+                <span class="prediction-value {% if pred_net >= 0 %}pos{% else %}neg{% endif %}">
+                    {{ active_currency.symbol }}{{ pred_net|floatformat:2 }}
+                </span>
+            </div>
+        </div>
+        <p class="predictions-note">
+            Based on your recent transactions, we expect you to
+            {% if pred_net >= 0 %}save{% else %}overspend by{% endif %}
+            <strong>{{ active_currency.symbol }}{{ pred_net|floatformat:2|slice:"1:" }}</strong> next month.
+        </p>
+    </section>
+
+    <!-- TREND CHART -->
+    <section class="panel panel-chart">
+        <div class="panel-header">
+            <h2>📈 12-Month Trend</h2>
+            <span class="panel-hint">Income vs Expense</span>
+        </div>
+        <div class="chart-wrap-tall">
+            <canvas id="yearChart"></canvas>
+        </div>
+    </section>
+
+    <!-- DONUTS -->
     <section class="charts-grid">
         <div class="panel panel-chart">
             <div class="panel-header">
-                <h2>🥧 Expenses by category · {{ now_month }}</h2>
+                <h2>🥧 Expenses by category</h2>
+                <span class="panel-hint">{{ now_month }}</span>
             </div>
             <div class="chart-wrap">
                 <canvas id="expCatChart"></canvas>
@@ -33,21 +162,77 @@
         </div>
         <div class="panel panel-chart">
             <div class="panel-header">
-                <h2>💰 Income by category · {{ now_month }}</h2>
+                <h2>💰 Income by category</h2>
+                <span class="panel-hint">{{ now_month }}</span>
             </div>
             <div class="chart-wrap">
                 <canvas id="incCatChart"></canvas>
             </div>
         </div>
     </section>
+
+    <!-- WORDED SUMMARY -->
+    <section class="summary-panel">
+        <h2>📝 Summary</h2>
+        <div class="summary-text">
+            <p>
+                Over the last 12 months, your income has averaged
+                <strong>{{ active_currency.symbol }}{{ avg_income|floatformat:2 }}</strong> per active month
+                and your expenses have averaged
+                <strong>{{ active_currency.symbol }}{{ avg_expense|floatformat:2 }}</strong>.
+                {% if avg_income > avg_expense %}
+                    That's a monthly surplus of roughly
+                    <strong>{{ active_currency.symbol }}{{ avg_income|floatformat:2 }}</strong> —
+                    translating to a healthy savings rate.
+                {% else %}
+                    You're currently spending more than you earn on average.
+                    Consider reviewing your top expense categories to identify areas to cut.
+                {% endif %}
+            </p>
+            <p>
+                {% if top_cat_label != "—" %}
+                    Your largest expense category this month is <strong>{{ top_cat_label }}</strong>,
+                    accounting for <strong>{{ active_currency.symbol }}{{ top_cat_amount|floatformat:2 }}</strong>.
+                {% endif %}
+                {% if expense_delta > 10 %}
+                    Expenses rose {{ expense_delta|floatformat:1 }}% compared to last month — worth watching.
+                {% elif expense_delta < -10 %}
+                    Nice work: expenses dropped {{ expense_delta|floatformat:1|slice:"1:" }}% versus last month.
+                {% else %}
+                    Monthly spending has been relatively stable.
+                {% endif %}
+            </p>
+            <p>
+                <strong>Looking ahead to {{ pred_month }}:</strong>
+                based on weighted averages from your last three active months, we forecast income around
+                {{ active_currency.symbol }}{{ pred_income|floatformat:2 }} and expenses around
+                {{ active_currency.symbol }}{{ pred_expense|floatformat:2 }},
+                {% if pred_net >= 0 %}
+                    leaving you an estimated net of <strong>{{ active_currency.symbol }}{{ pred_net|floatformat:2 }}</strong>.
+                {% else %}
+                    which would put you <strong>{{ active_currency.symbol }}{{ pred_net|floatformat:2|slice:"1:" }} in the red</strong>.
+                {% endif %}
+            </p>
+        </div>
+    </section>
+
+    <p class="print-footer">
+        Generated by FinanceFlow · {{ today|date:"F d, Y" }} · This report is confidential.
+    </p>
+
+    {% endif %}
 </div>
 {% endblock %}
 
 {% block extra_js %}
+{% if not no_currencies %}
 <script>
-    Chart.defaults.color = '#94a3b8';
-    Chart.defaults.font.family = "'Inter', sans-serif";
-    Chart.defaults.font.weight = '500';
+    const chartSymbol = "{{ active_currency.symbol|default:'' }}";
+    const chartCode = "{{ active_currency.code|default:'' }}";
+
+    Chart.defaults.color = '#64748b';
+    Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+    Chart.defaults.font.weight = '600';
 
     // 12-month trend
     new Chart(document.getElementById('yearChart'), {
@@ -64,56 +249,62 @@
                 {
                     label: 'Expense',
                     data: {{ chart_expense|safe }},
-                    backgroundColor: 'rgba(239,68,68,0.75)',
+                    backgroundColor: 'rgba(244,63,94,0.75)',
                     borderRadius: 6,
                 }
             ]
         },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
+            responsive: true, maintainAspectRatio: false,
             plugins: {
                 legend: { position: 'top', labels: { boxWidth: 12, padding: 16 } },
-                tooltip: { backgroundColor: '#1e293b', borderColor: '#334155', borderWidth: 1,
-                    callbacks: { label: c => `${c.dataset.label}: $${c.parsed.y.toFixed(2)}` } }
+                tooltip: { backgroundColor: '#0f172a', padding: 12, cornerRadius: 8,
+                    callbacks: { label: c => `${c.dataset.label}: ${chartSymbol}${c.parsed.y.toLocaleString()}` } }
             },
             scales: {
                 x: { grid: { display: false } },
-                y: { grid: { color: 'rgba(148,163,184,0.08)' }, ticks: { callback: v => '$' + v } }
+                y: { grid: { color: 'rgba(148,163,184,0.1)' }, ticks: { callback: v => chartSymbol + v.toLocaleString() } }
             }
         }
     });
 
-    // Expense categories
+    // Expense donut
     const expData = {{ cat_data|safe }};
     if (expData.length) {
         new Chart(document.getElementById('expCatChart'), {
             type: 'doughnut',
             data: {
                 labels: {{ cat_labels|safe }},
-                datasets: [{ data: expData, backgroundColor: {{ cat_colors|safe }}, borderColor: '#1e293b', borderWidth: 3 }]
+                datasets: [{ data: expData, backgroundColor: {{ cat_colors|safe }}, borderColor: '#fff', borderWidth: 3, hoverOffset: 10 }]
             },
             options: { responsive: true, maintainAspectRatio: false, cutout: '65%',
-                plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10 } } } }
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10 } },
+                    tooltip: { backgroundColor: '#0f172a', padding: 12, cornerRadius: 8,
+                        callbacks: { label: c => `${c.label}: ${chartSymbol}${c.parsed.toLocaleString()}` } } } }
         });
     } else {
-        document.getElementById('expCatChart').parentElement.innerHTML = '<p class="empty" style="padding:3rem 0;text-align:center;">No expenses this month.</p>';
+        document.getElementById('expCatChart').parentElement.innerHTML =
+            '<p class="empty" style="padding:3rem 0;text-align:center;">No expenses this month.</p>';
     }
 
-    // Income categories
+    // Income donut
     const incData = {{ inc_data|safe }};
     if (incData.length) {
         new Chart(document.getElementById('incCatChart'), {
             type: 'doughnut',
             data: {
                 labels: {{ inc_labels|safe }},
-                datasets: [{ data: incData, backgroundColor: {{ inc_colors|safe }}, borderColor: '#1e293b', borderWidth: 3 }]
+                datasets: [{ data: incData, backgroundColor: {{ inc_colors|safe }}, borderColor: '#fff', borderWidth: 3, hoverOffset: 10 }]
             },
             options: { responsive: true, maintainAspectRatio: false, cutout: '65%',
-                plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10 } } } }
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10 } },
+                    tooltip: { backgroundColor: '#0f172a', padding: 12, cornerRadius: 8,
+                        callbacks: { label: c => `${c.label}: ${chartSymbol}${c.parsed.toLocaleString()}` } } } }
         });
     } else {
-        document.getElementById('incCatChart').parentElement.innerHTML = '<p class="empty" style="padding:3rem 0;text-align:center;">No income this month.</p>';
+        document.getElementById('incCatChart').parentElement.innerHTML =
+            '<p class="empty" style="padding:3rem 0;text-align:center;">No income this month.</p>';
     }
 </script>
+{% endif %}
 {% endblock %}
