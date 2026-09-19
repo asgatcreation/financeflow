@@ -149,9 +149,13 @@
                 <div class="d7-recent">
                     {% for t in recent %}
                     <div class="d7-recent-row">
-                                                {% if t.receipt %}
-                            <a href="{{ t.receipt.url }}" target="_blank" class="d7-recent-receipt">
-                                <img src="{{ t.receipt.url }}" alt="Receipt">
+                                                           {% if t.receipt %}
+                            <a href="#" class="d7-recent-receipt"
+                               data-receipt="{{ t.receipt.url }}"
+                               data-receipt-label="{{ t.description }} — {{ t.date|date:'M d, Y' }}"
+                               style="width:36px;height:36px;flex:0 0 36px;display:block;border-radius:10px;overflow:hidden;cursor:zoom-in;">
+                                <img src="{{ t.receipt.url }}" alt="Receipt"
+                                     style="width:36px !important;height:36px !important;max-width:36px !important;max-height:36px !important;object-fit:cover !important;display:block !important;border-radius:10px !important;border:1px solid #e2e8f0 !important;">
                             </a>
                         {% else %}
                             <div class="d7-recent-icon" style="background:{{ t.category.color|default:'#6366f1' }}15; color:{{ t.category.color|default:'#6366f1' }};">{{ t.category.icon|default:"💳" }}</div>

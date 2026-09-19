@@ -405,5 +405,248 @@
         });
     })();
     </script>
+
+
+    <!-- ═══ RECEIPT VIEWER MODAL ═══ -->
+    <div class="rcpt-modal" id="rcptModal" aria-hidden="true">
+        <div class="rcpt-backdrop" data-rcpt-close></div>
+        <div class="rcpt-panel" role="dialog" aria-modal="true" aria-labelledby="rcptTitle">
+            <div class="rcpt-head">
+                <div class="rcpt-title" id="rcptTitle">Receipt</div>
+                <div class="rcpt-actions">
+                    <a class="rcpt-btn" id="rcptDownload" href="#" download title="Download">
+                        <span>📥</span> Download
+                    </a>
+                    <a class="rcpt-btn" id="rcptOpenTab" href="#" target="_blank" rel="noopener" title="Open in new tab">
+                        <span>↗</span>
+                    </a>
+                    <button class="rcpt-btn rcpt-close" data-rcpt-close aria-label="Close">✕</button>
+                </div>
+            </div>
+            <div class="rcpt-body" id="rcptBody">
+                <div class="rcpt-loader" id="rcptLoader">
+                    <div class="rcpt-spinner"></div>
+                    <div class="rcpt-loader-text">Loading receipt…</div>
+                </div>
+                <img class="rcpt-img" id="rcptImg" alt="Receipt" style="display:none;">
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .rcpt-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+        .rcpt-modal.open { display: flex; animation: rcptFadeIn 0.2s ease-out; }
+        @keyframes rcptFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .rcpt-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(8px);
+            cursor: pointer;
+        }
+
+        .rcpt-panel {
+            position: relative;
+            background: var(--surface, #fff);
+            border-radius: 20px;
+            overflow: hidden;
+            max-width: 960px;
+            width: 100%;
+            max-height: 92vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.5);
+            animation: rcptCardIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes rcptCardIn {
+            from { opacity: 0; transform: scale(0.95) translateY(12px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .rcpt-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            background: var(--bg-alt, #f1f5f9);
+            border-bottom: 1px solid var(--border, #e2e8f0);
+            flex-shrink: 0;
+        }
+        .rcpt-title {
+            font-size: 0.88rem;
+            font-weight: 800;
+            color: var(--text, #0f172a);
+            letter-spacing: -0.01em;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            min-width: 0;
+        }
+        .rcpt-actions {
+            display: flex;
+            gap: 0.4rem;
+            flex-shrink: 0;
+            align-items: center;
+        }
+        .rcpt-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.5rem 0.85rem;
+            border-radius: 9px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-decoration: none !important;
+            color: var(--text, #0f172a) !important;
+            background: var(--surface, #fff);
+            border: 1px solid var(--border, #e2e8f0);
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+        .rcpt-btn:hover {
+            background: var(--surface-hover, #f8fafc);
+            border-color: var(--border-strong, #cbd5e1);
+            transform: translateY(-1px);
+        }
+        .rcpt-close {
+            padding: 0.5rem 0.7rem !important;
+            font-size: 0.9rem !important;
+            color: #e11d48 !important;
+        }
+        .rcpt-close:hover {
+            background: #fff1f2 !important;
+            border-color: rgba(244,63,94,0.3) !important;
+        }
+
+        .rcpt-body {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0f172a;
+            padding: 1.25rem;
+            overflow: auto;
+            position: relative;
+        }
+        .rcpt-img {
+            max-width: 100%;
+            max-height: 75vh;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+            display: block;
+            object-fit: contain;
+            animation: rcptImgIn 0.3s ease-out;
+        }
+        @keyframes rcptImgIn {
+            from { opacity: 0; transform: scale(0.98); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+
+        .rcpt-loader {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        .rcpt-spinner {
+            width: 44px;
+            height: 44px;
+            border: 3px solid rgba(255, 255, 255, 0.15);
+            border-top-color: #10b981;
+            border-radius: 50%;
+            animation: rcptSpin 0.9s linear infinite;
+        }
+        @keyframes rcptSpin { to { transform: rotate(360deg); } }
+        .rcpt-loader-text {
+            font-size: 0.82rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+
+        @media (max-width: 640px) {
+            .rcpt-modal { padding: 0; }
+            .rcpt-panel { max-width: 100%; max-height: 100vh; border-radius: 0; height: 100vh; }
+            .rcpt-img { max-height: 70vh; }
+            .rcpt-btn span:not(:only-child) { display: none; }
+            .rcpt-btn { padding: 0.5rem 0.65rem; }
+        }
+    </style>
+
+    <script>
+        (function () {
+            var modal = document.getElementById('rcptModal');
+            if (!modal) return;
+            var img = document.getElementById('rcptImg');
+            var loader = document.getElementById('rcptLoader');
+            var title = document.getElementById('rcptTitle');
+            var dlBtn = document.getElementById('rcptDownload');
+            var tabBtn = document.getElementById('rcptOpenTab');
+
+            function open(url, label) {
+                loader.style.display = 'flex';
+                img.style.display = 'none';
+                img.src = '';
+                title.textContent = label || 'Receipt';
+                dlBtn.href = url;
+                tabBtn.href = url;
+
+                // Preload then show
+                var preload = new Image();
+                preload.onload = function () {
+                    img.src = url;
+                    img.style.display = 'block';
+                    loader.style.display = 'none';
+                };
+                preload.onerror = function () {
+                    loader.innerHTML = '<div style="color:#fda4af;font-size:0.9rem;">Could not load image.</div>';
+                };
+                preload.src = url;
+
+                modal.classList.add('open');
+                modal.setAttribute('aria-hidden', 'false');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function close() {
+                modal.classList.remove('open');
+                modal.setAttribute('aria-hidden', 'true');
+                document.body.style.overflow = '';
+                setTimeout(function () { img.src = ''; }, 250);
+            }
+
+            // Attach to all receipt triggers
+            document.addEventListener('click', function (e) {
+                var trigger = e.target.closest('[data-receipt]');
+                if (trigger) {
+                    e.preventDefault();
+                    open(trigger.getAttribute('data-receipt'), trigger.getAttribute('data-receipt-label'));
+                    return;
+                }
+                if (e.target.closest('[data-rcpt-close]')) {
+                    e.preventDefault();
+                    close();
+                }
+            });
+
+            // Esc to close
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && modal.classList.contains('open')) close();
+            });
+        })();
+    </script>
 </body>
 </html>

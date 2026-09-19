@@ -56,9 +56,13 @@
     <div class="tx5-ledger">
         {% for t in transactions %}
         <div class="tx5-row {% if t.type == 'income' %}tx5-row-in{% else %}tx5-row-out{% endif %}">
-                        {% if t.receipt %}
-                <a href="{{ t.receipt.url }}" target="_blank" class="tx5-row-receipt">
-                    <img src="{{ t.receipt.url }}" alt="Receipt">
+                                                {% if t.receipt %}
+                <a href="#" class="tx5-row-receipt"
+                   data-receipt="{{ t.receipt.url }}"
+                   data-receipt-label="{{ t.description }} — {{ t.date|date:'M d, Y' }}"
+                   style="width:46px;height:46px;flex:0 0 46px;display:block;border-radius:12px;overflow:hidden;cursor:zoom-in;">
+                    <img src="{{ t.receipt.url }}" alt="Receipt"
+                         style="width:46px !important;height:46px !important;max-width:46px !important;max-height:46px !important;object-fit:cover !important;display:block !important;border-radius:10px !important;border:1px solid #e2e8f0 !important;">
                 </a>
             {% else %}
                 <div class="tx5-row-icon" style="background:{{ t.category.color|default:'#6366f1' }}15; color:{{ t.category.color|default:'#6366f1' }};">{{ t.category.icon|default:"💳" }}</div>

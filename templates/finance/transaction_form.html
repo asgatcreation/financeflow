@@ -62,10 +62,13 @@
                 <small class="help">Attach a photo or scan. JPG, PNG, or WebP up to 5MB.</small>
                 {% if form.receipt.errors %}<small class="error">{{ form.receipt.errors.0 }}</small>{% endif %}
 
-                {% if object.receipt %}
+                                {% if object.receipt %}
                     <div class="receipt-current">
                         <span class="receipt-current-label">Current receipt:</span>
-                        <a href="{{ object.receipt.url }}" target="_blank">
+                        <a href="#" class="receipt-preview-trigger"
+                           data-receipt="{{ object.receipt.url }}"
+                           data-receipt-label="{{ object.description }} — {{ object.date|date:'M d, Y' }}"
+                           style="cursor:zoom-in;">
                             <img src="{{ object.receipt.url }}" alt="Receipt" class="receipt-thumb-lg">
                         </a>
                     </div>
