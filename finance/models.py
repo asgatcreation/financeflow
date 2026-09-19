@@ -103,6 +103,12 @@ class Transaction(models.Model):
     date = models.DateField(default=timezone.now)
     description = models.CharField(max_length=200)
     notes = models.TextField(blank=True)
+    receipt = models.ImageField(
+        upload_to="receipts/%Y/%m/",
+        null=True,
+        blank=True,
+        help_text="Optional — attach a photo or scan of the receipt",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

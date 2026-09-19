@@ -18,6 +18,8 @@ from django.utils import timezone
 from .models import Category, Transaction, Budget, Currency, UserCurrency
 from .forms import CategoryForm, TransactionForm, BudgetForm, UserCurrencyForm
 from django.shortcuts import render
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 
 # ─────────────────────────────────────────────────────────
@@ -797,4 +799,160 @@ class ReportsView(LoginRequiredMixin, TemplateView):
             "avg_income": avg_income,
         })
         return ctx
+
+
+
+class ExportExcelView(LoginRequiredMixin, View):
+    """Export all user transactions as a formatted .xlsx file."""
+
+    def get(self, request):
+        wb = Workbook()
+
+        # ── Sheet 1: All Transactions ──
+        ws = wb.active
+        ws.title = "Transactions"
+
+        # Header row styling
+        header_fill = PatternFill("solid", fgColor="10b981")
+        header_font = Font(bold=True, color="FFFFFF", size=11)
+        header_align = Alignment(horizontal="center", vertical="center")
+        thin_border = Border(
+            left=Side(style="thin", color="e2e8f0"),
+            right=Side(style="thin", color="e2e8f0"),
+            top=Side(style="thin", color="e2e8f0"),
+            bottom=Side(style="thin", color="e2e8f0"),
+        )
+
+        headers = [
+            "Date", "Type", "Amount", "Currency",
+            "Symbol", "Category", "Description", "Notes",
+        ]
+        ws.append(headers)
+        for col_num, _ in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col_num)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = header_align
+            cell.border = thin_border
+
+        # Fetch transactions
+        qs = (
+            Transaction.objects.filter(user=request.user)
+            .select_related("category", "currency")
+            .order_by("-date")
+        )
+
+        income_fill = PatternFill("solid", fgColor="ecfdf5")
+        expense_fill = PatternFill("solid", fgColor="fff1f2")
+
+        for t in qs:
+            row = [
+                t.date.isoformat() if t.date else "",
+                t.type.capitalize(),
+                float(t.amount),
+                t.currency.code if t.currency else "",
+                t.currency.symbol if t.currency else "",
+                t.category.name if t.category else "Uncategorized",
+                t.description,
+                t.notes or "",
+            ]
+            ws.append(row)
+
+            # Color the row by type
+            current_row = ws.max_row
+            fill = income_fill if t.type == "income" else expense_fill
+            for col_num in range(1, len(headers) + 1):
+                cell = ws.cell(row=current_row, column=col_num)
+                cell.fill = fill
+                cell.border = thin_border
+
+        # Column widths
+        widths = [12, 10, 14, 10, 8, 18, 40, 40]
+        for i, w in enumerate(widths, 1):
+            ws.column_dimensions[chr(64 + i)].width = w
+
+        # Freeze header
+        ws.freeze_panes = "A2"
+
+        # ── Sheet 2: Per-Currency Summary ──
+        ws2 = wb.create_sheet("Summary by Currency")
+        ws2.append(["Currency", "Symbol", "Total Income", "Total Expense", "Net"])
+        for col_num in range(1, 6):
+            cell = ws2.cell(row=1, column=col_num)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = header_align
+            cell.border = thin_border
+
+        from django.db.models import Sum as _Sum
+        agg = (
+            qs.values("currency__code", "currency__symbol", "currency__flag", "type")
+            .annotate(total=_Sum("amount"))
+        )
+        by_currency = {}
+        for row in agg:
+            code = row["currency__code"] or "—"
+            if code not in by_currency:
+                by_currency[code] = {
+                    "symbol": row["currency__symbol"] or "",
+                    "income": 0, "expense": 0,
+                }
+            if row["type"] == "income":
+                by_currency[code]["income"] = float(row["total"])
+            else:
+                by_currency[code]["expense"] = float(row["total"])
+
+        for code, data in sorted(by_currency.items()):
+            net = data["income"] - data["expense"]
+            ws2.append([code, data["symbol"], data["income"], data["expense"], net])
+            r = ws2.max_row
+            for c in range(1, 6):
+                ws2.cell(row=r, column=c).border = thin_border
+
+        for i, w in enumerate([12, 10, 16, 16, 16], 1):
+            ws2.column_dimensions[chr(64 + i)].width = w
+
+        # ── Sheet 3: Monthly Totals ──
+        ws3 = wb.create_sheet("Monthly Totals")
+        ws3.append(["Month", "Income", "Expense", "Net"])
+        for col_num in range(1, 5):
+            cell = ws3.cell(row=1, column=col_num)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = header_align
+            cell.border = thin_border
+
+        from django.db.models.functions import TruncMonth
+        monthly = (
+            qs.annotate(month=TruncMonth("date"))
+            .values("month", "type")
+            .annotate(total=_Sum("amount"))
+            .order_by("month")
+        )
+        by_month = {}
+        for row in monthly:
+            key = row["month"].strftime("%Y-%m") if row["month"] else "—"
+            by_month.setdefault(key, {"income": 0, "expense": 0})
+            by_month[key][row["type"]] = float(row["total"])
+
+        for month_key in sorted(by_month.keys()):
+            data = by_month[month_key]
+            net = data["income"] - data["expense"]
+            ws3.append([month_key, data["income"], data["expense"], net])
+            r = ws3.max_row
+            for c in range(1, 5):
+                ws3.cell(row=r, column=c).border = thin_border
+
+        for i, w in enumerate([14, 16, 16, 16], 1):
+            ws3.column_dimensions[chr(64 + i)].width = w
+
+        # ── Send the file ──
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        filename = f"financeflow_{date.today().isoformat()}.xlsx"
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        wb.save(response)
+        return response
+
 

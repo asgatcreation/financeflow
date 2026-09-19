@@ -203,6 +203,7 @@ It's a showcase of **full-stack Django**: authentication, per-user data isolatio
 - **Clear "Net" definition** — Net = Income − Expense for that specific currency
 - **Live filter feedback** — search, type, category, date range
 - **CSV export with full currency data** — UTF-8 BOM for Excel compatibility
+- **Excel (.xlsx) export** — 3 sheets: transactions, per-currency summary, monthly totals
 - Pagination (15 per page)
 - Modern card-style rows with category icons, currency flags
 
@@ -500,19 +501,19 @@ services:
 - [x] 4 interactive charts + currency selector
 - [x] Predictive insights on reports
 - [x] PDF export from reports
+- [x] PWA support (offline-first)
+- [x] Excel (.xlsx) export
+- [x] REST API with Django REST Framework
 
 ### 🚧 In Progress
 
 - [ ] Recurring transactions
 - [ ] Email reminders for budgets
-- [ ] Excel (.xlsx) export
 - [ ] Receipt image uploads
 - [ ] Shared wallets (multi-user budgets)
 
 ### 🔮 Planned
 
-- [ ] PWA support (offline-first)
-- [ ] REST API with Django REST Framework
 - [ ] Mobile app (React Native)
 - [ ] Bank import (CSV, OFX)
 - [ ] Currency conversion (live rates)

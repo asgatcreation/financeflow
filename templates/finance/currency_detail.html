@@ -76,7 +76,13 @@
     <div class="cd2-ledger">
         {% for t in transactions %}
         <div class="cd2-row {% if t.type == 'income' %}cd2-row-in{% else %}cd2-row-out{% endif %}">
-            <div class="cd2-row-icon" style="background:{{ t.category.color|default:'#6366f1' }}15; color:{{ t.category.color|default:'#6366f1' }};">{{ t.category.icon|default:"💳" }}</div>
+                        {% if t.receipt %}
+                <a href="{{ t.receipt.url }}" target="_blank" class="cd2-row-receipt">
+                    <img src="{{ t.receipt.url }}" alt="Receipt">
+                </a>
+            {% else %}
+                <div class="cd2-row-icon" style="background:{{ t.category.color|default:'#6366f1' }}15; color:{{ t.category.color|default:'#6366f1' }};">{{ t.category.icon|default:"💳" }}</div>
+            {% endif %}
             <div class="cd2-row-body">
                 <div class="cd2-row-desc">{{ t.description }}</div>
                 <div class="cd2-row-meta">

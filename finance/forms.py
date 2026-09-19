@@ -23,7 +23,7 @@ class TransactionForm(forms.ModelForm):
 
     class Meta:
         model = Transaction
-        fields = ["type", "amount", "currency", "category", "date", "description", "notes"]
+        fields = ["type", "amount", "currency", "category", "date", "description", "notes", "receipt"]
         widgets = {
             "type": forms.Select(attrs={"class": "form-input", "id": "id_type"}),
             "amount": forms.NumberInput(attrs={
@@ -36,6 +36,11 @@ class TransactionForm(forms.ModelForm):
             }),
             "notes": forms.Textarea(attrs={
                 "class": "form-input", "rows": 3, "placeholder": "Optional notes...",
+            }),
+            "receipt": forms.FileInput(attrs={
+                "class": "form-input",
+                "accept": "image/*",
+                "id": "id_receipt",
             }),
         }
 

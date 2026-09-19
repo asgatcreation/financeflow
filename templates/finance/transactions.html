@@ -11,6 +11,7 @@
         </div>
         <div class="tx5-head-actions">
             <a href="{% url 'finance:transaction_export' %}" class="tx5-btn tx5-btn-ghost">📥 CSV</a>
+            <a href="{% url 'finance:transaction_export_xlsx' %}" class="tx5-btn tx5-btn-ghost">📊 Excel</a>
             <a href="{% url 'finance:transaction_create' %}" class="tx5-btn tx5-btn-dark">＋ New</a>
         </div>
     </header>
@@ -55,9 +56,15 @@
     <div class="tx5-ledger">
         {% for t in transactions %}
         <div class="tx5-row {% if t.type == 'income' %}tx5-row-in{% else %}tx5-row-out{% endif %}">
-            <div class="tx5-row-icon" style="background:{{ t.category.color|default:'#6366f1' }}15; color:{{ t.category.color|default:'#6366f1' }};">{{ t.category.icon|default:"💳" }}</div>
+                        {% if t.receipt %}
+                <a href="{{ t.receipt.url }}" target="_blank" class="tx5-row-receipt">
+                    <img src="{{ t.receipt.url }}" alt="Receipt">
+                </a>
+            {% else %}
+                <div class="tx5-row-icon" style="background:{{ t.category.color|default:'#6366f1' }}15; color:{{ t.category.color|default:'#6366f1' }};">{{ t.category.icon|default:"💳" }}</div>
+            {% endif %}
             <div class="tx5-row-main">
-                <div class="tx5-row-desc">{{ t.description }}</div>
+                <div class="tx5-row-desc">{{ t.description }}{% if t.receipt %} <span class="tx5-receipt-badge">🧾</span>{% endif %}</div>
                 <div class="tx5-row-meta">
                     <span>{{ t.category.name|default:"Uncategorized" }}</span>
                     <span class="tx5-dot">·</span>

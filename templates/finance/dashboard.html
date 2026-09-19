@@ -149,7 +149,13 @@
                 <div class="d7-recent">
                     {% for t in recent %}
                     <div class="d7-recent-row">
-                        <div class="d7-recent-icon" style="background:{{ t.category.color|default:'#6366f1' }}15; color:{{ t.category.color|default:'#6366f1' }};">{{ t.category.icon|default:"💳" }}</div>
+                                                {% if t.receipt %}
+                            <a href="{{ t.receipt.url }}" target="_blank" class="d7-recent-receipt">
+                                <img src="{{ t.receipt.url }}" alt="Receipt">
+                            </a>
+                        {% else %}
+                            <div class="d7-recent-icon" style="background:{{ t.category.color|default:'#6366f1' }}15; color:{{ t.category.color|default:'#6366f1' }};">{{ t.category.icon|default:"💳" }}</div>
+                        {% endif %}
                         <div class="d7-recent-info">
                             <div class="d7-recent-desc">{{ t.description }}</div>
                             <div class="d7-recent-meta">{{ t.category.name|default:"Uncategorized" }} · {{ t.date|date:"M d" }}</div>

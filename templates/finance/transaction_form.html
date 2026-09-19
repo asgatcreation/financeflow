@@ -9,7 +9,7 @@
             <a href="{% url 'finance:transactions' %}" class="link">← Back</a>
         </header>
 
-        <form method="post" class="task-form">
+            <form method="post" enctype="multipart/form-data" class="task-form">
             {% csrf_token %}
             {% if form.non_field_errors %}
                 <div class="form-errors">{{ form.non_field_errors }}</div>
@@ -51,9 +51,25 @@
                 {{ form.description }}
             </div>
 
-            <div class="form-group">
+                        <div class="form-group">
                 <label>Notes</label>
                 {{ form.notes }}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.receipt.id_for_label }}">Receipt (optional)</label>
+                {{ form.receipt }}
+                <small class="help">Attach a photo or scan. JPG, PNG, or WebP up to 5MB.</small>
+                {% if form.receipt.errors %}<small class="error">{{ form.receipt.errors.0 }}</small>{% endif %}
+
+                {% if object.receipt %}
+                    <div class="receipt-current">
+                        <span class="receipt-current-label">Current receipt:</span>
+                        <a href="{{ object.receipt.url }}" target="_blank">
+                            <img src="{{ object.receipt.url }}" alt="Receipt" class="receipt-thumb-lg">
+                        </a>
+                    </div>
+                {% endif %}
             </div>
 
             <div class="form-actions">
@@ -88,5 +104,27 @@
             filterCats();
         }
     });
+</script>
+<script>
+    (function () {
+        var input = document.getElementById('id_receipt');
+        if (!input) return;
+        var preview = document.createElement('div');
+        preview.className = 'receipt-preview';
+        preview.style.display = 'none';
+        input.parentNode.appendChild(preview);
+
+        input.addEventListener('change', function (e) {
+            var file = e.target.files && e.target.files[0];
+            if (!file) { preview.style.display = 'none'; return; }
+            var reader = new FileReader();
+            reader.onload = function (ev) {
+                preview.innerHTML = '<span class="receipt-preview-label">Preview:</span>' +
+                    '<img src="' + ev.target.result + '" alt="Preview" class="receipt-thumb-lg">';
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        });
+    })();
 </script>
 {% endblock %}

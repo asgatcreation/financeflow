@@ -16,6 +16,7 @@ urlpatterns = [
     path("transactions/<int:pk>/edit/", views.TransactionUpdateView.as_view(), name="transaction_update"),
     path("transactions/<int:pk>/delete/", views.TransactionDeleteView.as_view(), name="transaction_delete"),
     path("transactions/export/", views.ExportCSVView.as_view(), name="transaction_export"),
+    path("transactions/export.xlsx", views.ExportExcelView.as_view(), name="transaction_export_xlsx"),
 
     # Categories
     path("categories/", views.CategoryListView.as_view(), name="categories"),
@@ -38,6 +39,6 @@ urlpatterns = [
     path("currencies/<int:pk>/remove/", views.CurrencyRemoveView.as_view(), name="currency_remove"),
     
     path("transactions/currency/<str:code>/", views.CurrencyDetailView.as_view(), name="currency_detail"),
-        
+    #path("transactions/export/", views.ExportCSVView.as_view(), name="transaction_export"),   
         
 ]
