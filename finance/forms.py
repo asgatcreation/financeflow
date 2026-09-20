@@ -130,3 +130,121 @@ class UserCurrencyForm(forms.Form):
             self.fields["currency"].queryset = Currency.objects.filter(
                 is_active=True
             ).exclude(id__in=owned)
+            
+
+# ═══════════════════════════════════════════════════════════
+# BULK ENTRY FORMSET
+# ═══════════════════════════════════════════════════════════
+from django.forms import BaseFormSet, formset_factory
+
+
+class BulkTransactionForm(forms.ModelForm):
+    """One row in the bulk-entry table. All fields optional so empty rows validate."""
+    date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date", "class": "bulk-input"}),
+    )
+
+    class Meta:
+        model = Transaction
+        fields = ["type", "amount", "currency", "category", "date", "description"]
+        widgets = {
+            "type": forms.Select(attrs={"class": "bulk-input bulk-type"}),
+            "amount": forms.NumberInput(attrs={
+                "class": "bulk-input", "step": "0.01", "min": "0",
+                "placeholder": "0.00", "inputmode": "decimal",
+            }),
+            "currency": forms.Select(attrs={"class": "bulk-input"}),
+            "category": forms.Select(attrs={"class": "bulk-input"}),
+            "description": forms.TextInput(attrs={
+                "class": "bulk-input", "placeholder": "Description",
+            }),
+        }
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Make everything optional at the form level so blank rows validate
+        for name in self.fields:
+            self.fields[name].required = False
+
+        self.user = user
+        if user is not None:
+            self.fields["category"].queryset = Category.objects.filter(user=user)
+            uc_ids = UserCurrency.objects.filter(user=user).values_list("currency_id", flat=True)
+            self.fields["currency"].queryset = Currency.objects.filter(id__in=uc_ids)
+
+            # Sensible defaults for new rows
+            if not self.is_bound and not self.instance.pk:
+                primary = UserCurrency.objects.filter(user=user, is_primary=True).first()
+                if primary:
+                    self.fields["currency"].initial = primary.currency_id
+                self.fields["date"].initial = timezone.now().date()
+
+            # Put "Expense" first — most common
+            self.fields["type"].choices = [("expense", "Expense"), ("income", "Income")]
+
+    def clean(self):
+        cleaned = super().clean()
+
+        # A row is "blank" if none of the meaningful fields are filled
+        has_content = bool(
+            cleaned.get("amount") or
+            cleaned.get("description") or
+            cleaned.get("type") or
+            cleaned.get("category")
+        )
+        if not has_content:
+            return cleaned
+
+        errors = []
+        if not cleaned.get("type"):
+            errors.append("Type is required.")
+        if not cleaned.get("amount"):
+            errors.append("Amount is required.")
+        if not cleaned.get("description"):
+            errors.append("Description is required.")
+        if not cleaned.get("currency"):
+            errors.append("Currency is required.")
+        if errors:
+            raise forms.ValidationError(errors)
+
+        if cleaned["amount"] <= 0:
+            raise forms.ValidationError("Amount must be greater than zero.")
+
+        cat = cleaned.get("category")
+        if cat and cat.type != cleaned.get("type"):
+            raise forms.ValidationError(
+                f"Category '{cat.name}' is for {cat.type}s, but you chose {cleaned['type']}."
+            )
+        return cleaned
+
+
+class BaseBulkTransactionFormSet(BaseFormSet):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
+    def get_form_kwargs(self, index):
+        kw = super().get_form_kwargs(index)
+        kw["user"] = self.user
+        return kw
+
+    def clean(self):
+        super().clean()
+        # Require at least one filled-in row
+        has_any = any(
+            form.has_changed() and form.cleaned_data and form.cleaned_data.get("amount")
+            for form in self.forms
+        )
+        if not has_any:
+            raise forms.ValidationError("Add at least one transaction.")
+
+
+BulkTransactionFormSet = formset_factory(
+    BulkTransactionForm,
+    formset=BaseBulkTransactionFormSet,
+    extra=5,
+    max_num=30,
+    can_delete=True,
+    validate_max=True,
+)

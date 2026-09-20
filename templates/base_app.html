@@ -357,28 +357,74 @@
             });
         }
 
-        // Install prompt
-        let deferredPrompt = null;
-        const banner = document.getElementById('pwaBanner');
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            if (banner) banner.style.display = 'flex';
-        });
-        document.getElementById('pwaInstall')?.addEventListener('click', async () => {
-            if (!deferredPrompt) return;
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            deferredPrompt = null;
-            if (banner) banner.style.display = 'none';
-        });
-        document.getElementById('pwaClose')?.addEventListener('click', () => {
-            if (banner) banner.style.display = 'none';
-            try { localStorage.setItem('pwa_dismissed', '1'); } catch (e) {}
-        });
-        if (localStorage.getItem('pwa_dismissed') === '1' && banner) {
-            banner.style.display = 'none';
-        }
+        // ── PWA install banner — smart show/dismiss logic ──
+        (function () {
+            var banner = document.getElementById('pwaBanner');
+            if (!banner) return;
+
+            // 1. If already running as an installed app → never show
+            if (window.matchMedia('(display-mode: standalone)').matches ||
+                window.navigator.standalone === true) {
+                return;
+            }
+
+            // 2. If previously installed → never show again
+            if (localStorage.getItem('pwa_installed') === '1') return;
+
+            // 3. If dismissed within the last 24 hours → don't show
+            var dismissedAt = localStorage.getItem('pwa_dismissed_at');
+            if (dismissedAt) {
+                var hours = (Date.now() - parseInt(dismissedAt, 10)) / (1000 * 60 * 60);
+                if (hours < 24) return;
+            }
+
+            var deferredPrompt = null;
+
+            window.addEventListener('beforeinstallprompt', function (e) {
+                e.preventDefault();
+                deferredPrompt = e;
+
+                // Double-check just before showing
+                if (localStorage.getItem('pwa_installed') === '1') return;
+                var d = localStorage.getItem('pwa_dismissed_at');
+                if (d) {
+                    var h = (Date.now() - parseInt(d, 10)) / (1000 * 60 * 60);
+                    if (h < 24) return;
+                }
+
+                banner.style.display = 'flex';
+            });
+
+            var installBtn = document.getElementById('pwaInstall');
+            if (installBtn) {
+                installBtn.addEventListener('click', async function () {
+                    if (!deferredPrompt) return;
+                    deferredPrompt.prompt();
+                    var result = await deferredPrompt.userChoice;
+                    deferredPrompt = null;
+                    if (result && result.outcome === 'accepted') {
+                        try { localStorage.setItem('pwa_installed', '1'); } catch (e) {}
+                    }
+                    banner.style.display = 'none';
+                });
+            }
+
+            var closeBtn = document.getElementById('pwaClose');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', function () {
+                    try {
+                        localStorage.setItem('pwa_dismissed_at', Date.now().toString());
+                    } catch (e) {}
+                    banner.style.display = 'none';
+                });
+            }
+
+            // Fires when the browser installs the app
+            window.addEventListener('appinstalled', function () {
+                try { localStorage.setItem('pwa_installed', '1'); } catch (e) {}
+                banner.style.display = 'none';
+            });
+        })();
     </script>
 
     <div class="ios-install-banner" id="iosBanner" style="display:none;">
