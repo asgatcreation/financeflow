@@ -1,0 +1,59 @@
+<div class="fx-row" data-bulk-row data-type="expense">
+    {{ form.id }}
+
+    <div class="fx-cell fx-cell-num">
+        <span class="fx-num-badge" data-row-num>1</span>
+    </div>
+
+    <div class="fx-cell fx-cell-type">
+        <div class="fx-type-toggle" data-type-toggle>
+            {{ form.type }}
+            <button type="button" class="fx-type-btn fx-type-out" data-type-value="expense">
+                <span class="fx-type-dot"></span>
+                <span>Out</span>
+            </button>
+            <button type="button" class="fx-type-btn fx-type-in" data-type-value="income">
+                <span class="fx-type-dot"></span>
+                <span>In</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="fx-cell fx-cell-amount">
+        <div class="fx-amount-wrap">
+            <span class="fx-amount-prefix" data-amount-prefix>$</span>
+            {{ form.amount }}
+        </div>
+    </div>
+
+    <div class="fx-cell fx-cell-currency">{{ form.currency }}</div>
+    <div class="fx-cell fx-cell-category">{{ form.category }}</div>
+    <div class="fx-cell fx-cell-date">{{ form.date }}</div>
+
+    <div class="fx-cell fx-cell-desc">
+        <div class="fx-desc-wrap">
+            {{ form.description }}
+            <label class="fx-receipt-btn" title="Attach receipt" data-receipt-label>
+                {{ form.receipt }}
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                </svg>
+                <span class="fx-receipt-preview" data-receipt-preview></span>
+            </label>
+        </div>
+    </div>
+
+    <div class="fx-cell fx-cell-del">
+        <span style="display:none;">{{ form.DELETE }}</span>
+        <button type="button" class="fx-del" data-remove-row aria-label="Remove">×</button>
+    </div>
+
+    {% if form.errors %}
+    <div class="fx-row-errors">
+        {% for field, errs in form.errors.items %}
+            {% for err in errs %}<div>{{ err }}</div>{% endfor %}
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>

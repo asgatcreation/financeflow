@@ -147,7 +147,7 @@ class BulkTransactionForm(forms.ModelForm):
 
     class Meta:
         model = Transaction
-        fields = ["type", "amount", "currency", "category", "date", "description"]
+        fields = ["type", "amount", "currency", "category", "date", "description", "receipt"]
         widgets = {
             "type": forms.Select(attrs={"class": "bulk-input bulk-type"}),
             "amount": forms.NumberInput(attrs={
@@ -158,6 +158,10 @@ class BulkTransactionForm(forms.ModelForm):
             "category": forms.Select(attrs={"class": "bulk-input"}),
             "description": forms.TextInput(attrs={
                 "class": "bulk-input", "placeholder": "Description",
+            }),
+            "receipt": forms.FileInput(attrs={
+                "accept": "image/*",
+                "class": "fx-file-input",
             }),
         }
 

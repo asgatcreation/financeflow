@@ -1,0 +1,322 @@
+{% extends "base_app.html" %}
+{% block title %}Bulk entry · FinanceFlow{% endblock %}
+
+{% block content %}
+
+<div class="fx-wrap">
+
+    <!-- ═══ TOOLBAR ═══ -->
+    <div class="fx-bar">
+        <div class="fx-bar-left">
+            <a href="{% url 'finance:transactions' %}" class="fx-back" aria-label="Back">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </a>
+            <div>
+                <h1 class="fx-title">Bulk entry</h1>
+                <p class="fx-sub">Add up to 30 transactions at once · Blank rows are ignored</p>
+            </div>
+        </div>
+        <div class="fx-bar-right">
+            <div class="fx-kbd-hint">
+                <span class="fx-kbd">Tab</span> next
+                <span class="fx-kbd">↵</span> save
+            </div>
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="fx-form" id="bulkForm" autocomplete="off">
+        {% csrf_token %}
+        {{ formset.management_form }}
+
+        {% if formset.non_form_errors %}
+            <div class="fx-alert">
+                {% for err in formset.non_form_errors %}<div>{{ err }}</div>{% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- ═══ SHEET ═══ -->
+        <div class="fx-sheet">
+
+            <div class="fx-sheet-head">
+                <div class="fx-head-num">#</div>
+                <div class="fx-head-type">Type</div>
+                <div class="fx-head-amount">Amount</div>
+                <div class="fx-head-currency">Currency</div>
+                <div class="fx-head-category">Category</div>
+                <div class="fx-head-date">Date</div>
+                <div class="fx-head-desc">Description · Receipt</div>
+                <div class="fx-head-del"></div>
+            </div>
+
+            <div class="fx-rows" id="bulkRows">
+                {% for form in formset %}
+                    {% include "finance/_bulk_row.html" with form=form %}
+                {% endfor %}
+            </div>
+
+            <button type="button" class="fx-add-row" id="addRowBtn">
+                <span class="fx-add-icon">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </span>
+                <span>Add row</span>
+            </button>
+
+        </div>
+
+        <!-- ═══ SUMMARY BAR ═══ -->
+        <div class="fx-summary" id="summaryBar">
+            <div class="fx-summary-label">Running totals</div>
+            <div class="fx-summary-chips" id="summaryChips">
+                <span class="fx-sum-empty">Add rows to see totals</span>
+            </div>
+        </div>
+
+        <!-- ═══ ACTIONS ═══ -->
+        <div class="fx-actions">
+            <div class="fx-meta">
+                <span id="rowCount">5</span> rows ready · <span id="filledCount">0</span> filled
+            </div>
+            <div class="fx-actions-right">
+                <a href="{% url 'finance:transactions' %}" class="fx-btn fx-btn-ghost">Cancel</a>
+                <button type="submit" class="fx-btn fx-btn-primary">
+                    Save transactions
+                    <span class="fx-btn-kbd">↵</span>
+                </button>
+            </div>
+        </div>
+
+    </form>
+
+    <template id="emptyRowTemplate">
+        {% with form=formset.empty_form %}
+            {% include "finance/_bulk_row.html" with form=form %}
+        {% endwith %}
+    </template>
+
+</div>
+
+<!-- ═══ CURRENCY MAP (keyed by currency ID, not code) ═══ -->
+<script id="currencyMap" type="application/json">{
+    {% for uc in user_currencies %}"{{ uc.currency.id }}": {"code": "{{ uc.currency.code }}", "symbol": "{{ uc.currency.symbol|escapejs }}", "flag": "{{ uc.currency.flag|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}
+}</script>
+
+<!-- ═══ CATEGORY MAP ═══ -->
+<script id="categoryMap" type="application/json">[
+    {% for c in all_categories %}{"id": "{{ c.id }}", "name": "{{ c.name|escapejs }}", "icon": "{{ c.icon|escapejs }}", "type": "{{ c.type }}"}{% if not forloop.last %},{% endif %}{% endfor %}
+]</script>
+
+<script>
+(function () {
+    "use strict";
+
+    var CURRENCY_MAP = JSON.parse(document.getElementById('currencyMap').textContent || '{}');
+    var CATEGORY_MAP = JSON.parse(document.getElementById('categoryMap').textContent || '[]');
+    var totalForms  = document.getElementById('id_form-TOTAL_FORMS');
+    var rowsWrap    = document.getElementById('bulkRows');
+    var addBtn      = document.getElementById('addRowBtn');
+    var tmpl        = document.getElementById('emptyRowTemplate');
+    var rowCountEl  = document.getElementById('rowCount');
+    var filledEl    = document.getElementById('filledCount');
+    var chipsEl     = document.getElementById('summaryChips');
+    if (!rowsWrap || !tmpl) return;
+
+    var MAX = parseInt(document.getElementById('id_form-MAX_NUM_FORMS')?.value || '30', 10);
+
+    /* ─── Re-number rows ─── */
+    function renumber() {
+        var rows = rowsWrap.querySelectorAll('[data-bulk-row]');
+        rows.forEach(function (r, i) {
+            var n = r.querySelector('[data-row-num]');
+            if (n) n.textContent = i + 1;
+        });
+        rowCountEl.textContent = rows.length;
+        updateSummary();
+    }
+
+    /* ─── Live totals per currency ─── */
+    function updateSummary() {
+        var totals = {};
+        var filled = 0;
+        rowsWrap.querySelectorAll('[data-bulk-row]').forEach(function (row) {
+            if (row.classList.contains('fx-row-deleting')) return;
+            var amtEl  = row.querySelector('input[name$="-amount"]');
+            var curEl  = row.querySelector('select[name$="-currency"]');
+            var typeEl = row.querySelector('select[name$="-type"]');
+            var descEl = row.querySelector('input[name$="-description"]');
+
+            var amt = parseFloat((amtEl && amtEl.value) || 0);
+            var hasDesc = descEl && descEl.value.trim();
+            if (!amt || amt <= 0) {
+                if (hasDesc) filled++;
+                return;
+            }
+            filled++;
+
+            var info = CURRENCY_MAP[curEl && curEl.value] || { code: '?', symbol: '' };
+            var code = info.code;
+            var symbol = info.symbol;
+            var type = typeEl ? typeEl.value : 'expense';
+
+            if (!totals[code]) totals[code] = { in: 0, out: 0, symbol: symbol };
+            if (type === 'income') totals[code].in += amt;
+            else totals[code].out += amt;
+        });
+
+        filledEl.textContent = filled;
+
+        var entries = Object.keys(totals);
+        if (!entries.length) {
+            chipsEl.innerHTML = '<span class="fx-sum-empty">Add rows to see totals</span>';
+            return;
+        }
+        chipsEl.innerHTML = entries.map(function (code) {
+            var t = totals[code];
+            var net = t.in - t.out;
+            var netClass = net >= 0 ? 'pos' : 'neg';
+            var netStr = (net < 0 ? '−' : '+') + t.symbol + Math.abs(net).toLocaleString(undefined, {maximumFractionDigits: 2});
+            return '<span class="fx-sum-chip">' +
+                '<span class="fx-sum-code">' + code + '</span>' +
+                '<span class="fx-sum-val ' + netClass + '">' + netStr + '</span>' +
+                '</span>';
+        }).join('');
+    }
+
+    /* ─── Category filter by type ─── */
+    function applyCategoryFilter(row) {
+        var typeSelect = row.querySelector('select[name$="-type"]');
+        var catSelect = row.querySelector('select[name$="-category"]');
+        if (!typeSelect || !catSelect) return;
+
+        var currentVal = catSelect.value;
+        var type = typeSelect.value;
+        var matching = CATEGORY_MAP.filter(function (c) { return c.type === type; });
+
+        catSelect.innerHTML = '<option value="">---------</option>';
+        matching.forEach(function (c) {
+            var opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = c.icon + ' ' + c.name;
+            catSelect.appendChild(opt);
+        });
+
+        if (matching.some(function (c) { return String(c.id) === currentVal; })) {
+            catSelect.value = currentVal;
+        }
+    }
+
+    /* ─── Type segmented toggle ─── */
+    function initTypeToggle(row) {
+        var toggleWrap = row.querySelector('[data-type-toggle]');
+        if (!toggleWrap) return;
+        var select = toggleWrap.querySelector('select');
+        var btns = toggleWrap.querySelectorAll('[data-type-value]');
+
+        function apply() {
+            btns.forEach(function (b) {
+                b.classList.toggle('active', b.dataset.typeValue === select.value);
+            });
+            row.setAttribute('data-type', select.value || 'expense');
+            applyCategoryFilter(row);
+        }
+        btns.forEach(function (b) {
+            b.addEventListener('click', function (e) {
+                e.preventDefault();
+                select.value = b.dataset.typeValue;
+                apply();
+                updateSummary();
+            });
+        });
+        apply();
+    }
+
+    /* ─── Amount prefix (uses ID-keyed map) ─── */
+    function initAmountPrefix(row) {
+        var curSel = row.querySelector('select[name$="-currency"]');
+        var prefix = row.querySelector('[data-amount-prefix]');
+        if (!curSel || !prefix) return;
+
+        function apply() {
+            var info = CURRENCY_MAP[curSel.value];
+            prefix.textContent = (info && info.symbol) ? info.symbol : '$';
+        }
+        curSel.addEventListener('change', apply);
+        apply();
+    }
+
+    /* ─── Receipt file preview ─── */
+    function initReceipt(row) {
+        var fileInput = row.querySelector('input[type="file"]');
+        var btn = row.querySelector('.fx-receipt-btn');
+        if (!fileInput || !btn) return;
+
+        fileInput.addEventListener('change', function () {
+            var file = fileInput.files && fileInput.files[0];
+            if (file) {
+                btn.classList.add('fx-receipt-attached');
+                btn.setAttribute('title', 'Attached: ' + file.name);
+            } else {
+                btn.classList.remove('fx-receipt-attached');
+                btn.setAttribute('title', 'Attach receipt');
+            }
+        });
+    }
+
+    /* ─── Bind row ─── */
+    function bindRow(row) {
+        initTypeToggle(row);
+        initAmountPrefix(row);
+        initReceipt(row);
+    }
+    function bindAll() {
+        rowsWrap.querySelectorAll('[data-bulk-row]').forEach(bindRow);
+    }
+
+    /* ─── Add row ─── */
+    addBtn.addEventListener('click', function () {
+        var i = parseInt(totalForms.value, 10);
+        if (i >= MAX) { alert('Max ' + MAX + ' rows.'); return; }
+        var html = tmpl.innerHTML.replace(/__prefix__/g, i);
+        var wrap = document.createElement('div');
+        wrap.innerHTML = html.trim();
+        var newRow = wrap.firstElementChild;
+        rowsWrap.appendChild(newRow);
+        totalForms.value = i + 1;
+        bindRow(newRow);
+        renumber();
+        var focusable = newRow.querySelector('.fx-cell-type button, .fx-cell-amount input');
+        if (focusable) focusable.focus();
+    });
+
+    /* ─── Remove row ─── */
+    rowsWrap.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-remove-row]');
+        if (!btn) return;
+        e.preventDefault();
+        var row = btn.closest('[data-bulk-row]');
+        if (!row) return;
+        var delBox = row.querySelector('input[type="checkbox"][name$="-DELETE"]');
+        if (delBox) { delBox.checked = true; row.classList.add('fx-row-deleting'); }
+        else { row.remove(); }
+        renumber();
+    });
+
+    /* ─── Live updates ─── */
+    rowsWrap.addEventListener('input', updateSummary);
+    rowsWrap.addEventListener('change', updateSummary);
+
+    /* ─── Enter to save ─── */
+    rowsWrap.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter') return;
+        if (e.target.tagName === 'TEXTAREA') return;
+        if (e.target.type === 'file') return;
+        e.preventDefault();
+        document.getElementById('bulkForm').submit();
+    });
+
+    /* ─── Init ─── */
+    bindAll();
+    renumber();
+})();
+</script>
+
+{% endblock %}

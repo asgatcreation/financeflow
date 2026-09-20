@@ -83,31 +83,47 @@
     </div>
 </div>
 
-<script>
-    // Simple dynamic category filter based on selected type
-    document.addEventListener('DOMContentLoaded', function() {
-        const typeSelect = document.getElementById('id_type');
-        const catSelect = document.getElementById('id_category');
-        if (!typeSelect || !catSelect) return;
+<!-- ═══ CATEGORY MAP ═══ -->
+<script id="tfcategoryMap" type="application/json">[
+    {% for c in all_categories %}{"id": "{{ c.id }}", "name": "{{ c.name|escapejs }}", "icon": "{{ c.icon|escapejs }}", "type": "{{ c.type }}"}{% if not forloop.last %},{% endif %}{% endfor %}
+]</script>
 
-        const allOptions = Array.from(catSelect.options);
-        function filterCats() {
-            const t = typeSelect.value;
-            catSelect.innerHTML = '';
-            allOptions.forEach(opt => {
-                if (!opt.value) { catSelect.appendChild(opt); return; }
-                const catType = opt.getAttribute('data-type') || '';
-                if (catType === t) catSelect.appendChild(opt.cloneNode(true));
-            });
+<script>
+(function () {
+    "use strict";
+
+    var CATEGORY_MAP = JSON.parse(document.getElementById('tfcategoryMap').textContent || '[]');
+    var typeSelect = document.getElementById('id_type');
+    var catSelect  = document.getElementById('id_category');
+    if (!typeSelect || !catSelect) return;
+
+    function filterCategories() {
+        var currentVal = catSelect.value;
+        var type = typeSelect.value;
+        var matching = CATEGORY_MAP.filter(function (c) { return c.type === type; });
+
+        catSelect.innerHTML = '<option value="">---------</option>';
+        matching.forEach(function (c) {
+            var opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = c.icon + ' ' + c.name;
+            catSelect.appendChild(opt);
+        });
+
+        // Preserve selection if it still matches the type
+        if (matching.some(function (c) { return String(c.id) === currentVal; })) {
+            catSelect.value = currentVal;
         }
-        // If options don't have data-type yet, we skip filtering
-        const hasTypeAttrs = allOptions.some(o => o.getAttribute('data-type'));
-        if (hasTypeAttrs) {
-            typeSelect.addEventListener('change', filterCats);
-            filterCats();
-        }
-    });
+    }
+
+    typeSelect.addEventListener('change', filterCategories);
+
+    // Run on page load so an existing selection stays valid
+    filterCategories();
+})();
 </script>
+
+
 <script>
     (function () {
         var input = document.getElementById('id_receipt');

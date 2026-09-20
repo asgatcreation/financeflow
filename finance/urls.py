@@ -23,6 +23,9 @@ urlpatterns = [
     path("categories/new/", views.CategoryCreateView.as_view(), name="category_create"),
     path("categories/<int:pk>/edit/", views.CategoryUpdateView.as_view(), name="category_update"),
     path("categories/<int:pk>/delete/", views.CategoryDeleteView.as_view(), name="category_delete"),
+    path("transactions/bulk/", views.BulkTransactionView.as_view(), name="transaction_bulk"),
+    
+    
 
     # Budgets
     path("budgets/", views.BudgetListView.as_view(), name="budgets"),

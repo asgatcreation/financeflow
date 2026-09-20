@@ -9,9 +9,10 @@
             <h1>Statement</h1>
             <p class="tx5-sub">{{ page_obj.paginator.count }} entr{{ page_obj.paginator.count|pluralize:"y,ies" }} across {{ currency_totals|length }} currenc{{ currency_totals|length|pluralize:"y,ies" }}</p>
         </div>
-        <div class="tx5-head-actions">
+                <div class="tx5-head-actions">
             <a href="{% url 'finance:transaction_export' %}" class="tx5-btn tx5-btn-ghost">📥 CSV</a>
             <a href="{% url 'finance:transaction_export_xlsx' %}" class="tx5-btn tx5-btn-ghost">📊 Excel</a>
+            <a href="{% url 'finance:transaction_bulk' %}" class="tx5-btn tx5-btn-ghost">⚡ Bulk entry</a>
             <a href="{% url 'finance:transaction_create' %}" class="tx5-btn tx5-btn-dark">＋ New</a>
         </div>
     </header>

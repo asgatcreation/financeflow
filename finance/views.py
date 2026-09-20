@@ -451,6 +451,7 @@ class TransactionCreateView(LoginRequiredMixin, CreateView):
         ctx = super().get_context_data(**kwargs)
         ctx["page_title"] = "New Transaction"
         ctx["button_text"] = "Save Transaction"
+        ctx["all_categories"] = Category.objects.filter(user=self.request.user).order_by("type", "name")
         return ctx
 
 
@@ -476,6 +477,7 @@ class TransactionUpdateView(LoginRequiredMixin, UpdateView):
         ctx = super().get_context_data(**kwargs)
         ctx["page_title"] = "Edit Transaction"
         ctx["button_text"] = "Save Changes"
+        ctx["all_categories"] = Category.objects.filter(user=self.request.user).order_by("type", "name")
         return ctx
 
 
@@ -954,5 +956,58 @@ class ExportExcelView(LoginRequiredMixin, View):
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         wb.save(response)
         return response
+    
+    
+from .forms import BulkTransactionFormSet
 
+
+class BulkTransactionView(LoginRequiredMixin, View):
+    """Add many transactions at once via a table."""
+    template_name = "finance/transaction_bulk.html"
+
+    def _ctx(self, request, formset):
+        return {
+            "formset": formset,
+            "user_currencies": (
+                UserCurrency.objects
+                .filter(user=request.user)
+                .select_related("currency")
+                .order_by("-is_primary", "currency__code")
+            ),
+            "all_categories": Category.objects.filter(user=request.user).order_by("type", "name"),
+        }
+
+    def get(self, request):
+        formset = BulkTransactionFormSet(user=request.user)
+        return render(request, self.template_name, self._ctx(request, formset))
+
+    def post(self, request):
+        formset = BulkTransactionFormSet(request.POST, request.FILES, user=request.user)
+        if formset.is_valid():
+            created = 0
+            for form in formset:
+                if form.cleaned_data.get("DELETE"):
+                    continue
+                if not form.cleaned_data.get("amount"):
+                    continue
+                if not form.cleaned_data.get("description"):
+                    continue
+                instance = form.save(commit=False)
+                instance.user = request.user
+                # Handle receipt upload
+                if form.cleaned_data.get("receipt"):
+                    instance.receipt = form.cleaned_data["receipt"]
+                instance.save()
+                created += 1
+
+            if created:
+                messages.success(
+                    request,
+                    f"✅ {created} transaction{'s' if created != 1 else ''} added.",
+                )
+                return redirect("finance:transactions")
+            else:
+                messages.warning(request, "No transactions were added.")
+
+        return render(request, self.template_name, self._ctx(request, formset))
 
