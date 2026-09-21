@@ -1,0 +1,71 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bad request · FinanceFlow</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+            background: #f8fafc; color: #0f172a;
+            min-height: 100vh; display: grid; place-items: center;
+            padding: 2rem 1.5rem; -webkit-font-smoothing: antialiased;
+            background-image: radial-gradient(circle at 20% 20%, rgba(245, 158, 11, 0.08), transparent 45%);
+        }
+        .err-wrap { max-width: 560px; width: 100%; text-align: center; }
+        .err-brand {
+            display: inline-flex; align-items: center; gap: 0.6rem;
+            margin-bottom: 2rem; text-decoration: none; color: #0f172a;
+            font-weight: 800; font-size: 1.05rem; letter-spacing: -0.02em;
+        }
+        .err-brand-mark {
+            width: 40px; height: 40px; border-radius: 12px;
+            background: linear-gradient(135deg, #10b981, #34d399);
+            color: #fff; display: grid; place-items: center;
+            font-weight: 800; font-size: 1.05rem;
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+        }
+        .err-icon {
+            width: 90px; height: 90px; border-radius: 24px;
+            background: linear-gradient(135deg, #fffbeb, #fef3c7);
+            color: #d97706;
+            display: grid; place-items: center; font-size: 2.5rem;
+            margin: 0 auto 1.5rem;
+            box-shadow: 0 12px 30px -8px rgba(245, 158, 11, 0.25);
+        }
+        .err-title { font-size: 1.85rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.75rem; }
+        .err-msg { font-size: 1rem; color: #64748b; line-height: 1.65; margin-bottom: 2rem; font-weight: 500; }
+        .err-links { display: flex; gap: 0.6rem; justify-content: center; flex-wrap: wrap; }
+        .err-link {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            padding: 0.7rem 1.15rem; background: #fff;
+            border: 1px solid #e2e8f0; border-radius: 11px;
+            font-size: 0.85rem; font-weight: 700;
+            color: #0f172a !important; text-decoration: none !important;
+            transition: all 0.15s;
+        }
+        .err-link:hover { background: #ecfdf5; border-color: #a7f3d0; color: #047857 !important; transform: translateY(-1px); }
+        .err-link-primary { background: #0f172a; color: #fff !important; border-color: #0f172a; }
+        .err-link-primary:hover { background: #1e293b; color: #fff !important; }
+    </style>
+</head>
+<body>
+    <div class="err-wrap">
+        <a href="/" class="err-brand">
+            <span class="err-brand-mark">F</span>
+            <span>FinanceFlow</span>
+        </a>
+        <div class="err-icon">✋</div>
+        <h1 class="err-title">Bad request</h1>
+        <p class="err-msg">The request couldn't be processed. This usually happens when a form is submitted with invalid data or the page has been open too long.</p>
+        <div class="err-links">
+            <a href="/" class="err-link err-link-primary">← Back home</a>
+            <a href="/transactions/" class="err-link">💸 Transactions</a>
+        </div>
+    </div>
+</body>
+</html>

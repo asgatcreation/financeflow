@@ -18,6 +18,8 @@ ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "127.0.0.1,localhost").split(","
 ALLOWED_HOSTS += [".onrender.com"]
 
 CSRF_TRUSTED_ORIGINS = ["https://*.onrender.com"]
+CSRF_FAILURE_VIEW = "expense_tracker.views.csrf_failure"
+
 # allauth social redirect
 SOCIALACCOUNT_LOGIN_ON_GET = True
 
@@ -179,7 +181,11 @@ STORAGES = {
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-if not DEBUG:
+# ─── Production security ──────────────────────────────────
+# Only enforce SSL redirect when NOT debugging AND we're on a real host (Render)
+IS_PRODUCTION = not DEBUG and bool(os.environ.get("DATABASE_URL"))
+
+if IS_PRODUCTION:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True

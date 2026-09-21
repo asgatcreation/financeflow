@@ -100,7 +100,10 @@
             </div>
             <div class="cd2-row-actions">
                 <a href="{% url 'finance:transaction_update' t.pk %}">✏️</a>
-                <a href="{% url 'finance:transaction_delete' t.pk %}" class="del">🗑️</a>
+                <button type="button" class="del" style="background:transparent;border:none;cursor:pointer;padding:0;font-size:inherit;"
+                        data-delete-url="{% url 'finance:transaction_delete' t.pk %}"
+                        data-delete-name="{{ t.description|escapejs }}"
+                        data-delete-type="transaction">🗑️</button>
             </div>
         </div>
         {% endfor %}

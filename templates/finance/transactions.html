@@ -4,18 +4,24 @@
 {% block content %}
 <div class="app-content">
 
-    <header class="tx5-header">
+        <header class="tx5-header">
         <div>
             <h1>Statement</h1>
             <p class="tx5-sub">{{ page_obj.paginator.count }} entr{{ page_obj.paginator.count|pluralize:"y,ies" }} across {{ currency_totals|length }} currenc{{ currency_totals|length|pluralize:"y,ies" }}</p>
         </div>
-                <div class="tx5-head-actions">
-            <a href="{% url 'finance:transaction_export' %}" class="tx5-btn tx5-btn-ghost">📥 CSV</a>
-            <a href="{% url 'finance:transaction_export_xlsx' %}" class="tx5-btn tx5-btn-ghost">📊 Excel</a>
+        <div class="tx5-head-actions">
+            <a href="{% url 'finance:transaction_export' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="tx5-btn tx5-btn-ghost">📥 CSV</a>
+            <a href="{% url 'finance:transaction_export_xlsx' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="tx5-btn tx5-btn-ghost">📊 Excel</a>
             <a href="{% url 'finance:transaction_bulk' %}" class="tx5-btn tx5-btn-ghost">⚡ Bulk entry</a>
             <a href="{% url 'finance:transaction_create' %}" class="tx5-btn tx5-btn-dark">＋ New</a>
         </div>
     </header>
+
+    {% if request.GET.q or request.GET.type or request.GET.currency or request.GET.category or request.GET.start or request.GET.end %}
+        <div class="tx5-filter-note">
+            🔎 Export is filtered · <a href="{% url 'finance:transactions' %}">clear filters</a>
+        </div>
+    {% endif %}
 
         {% if currency_totals %}
     <section class="tx6-strip">
@@ -82,7 +88,10 @@
             </div>
             <div class="tx5-row-actions">
                 <a href="{% url 'finance:transaction_update' t.pk %}">✏️</a>
-                <a href="{% url 'finance:transaction_delete' t.pk %}" class="del">🗑️</a>
+                <button type="button" class="del" style="background:transparent;border:none;cursor:pointer;padding:0;font-size:inherit;"
+                        data-delete-url="{% url 'finance:transaction_delete' t.pk %}"
+                        data-delete-name="{{ t.description|escapejs }}"
+                        data-delete-type="transaction">🗑️</button>
             </div>
         </div>
         {% endfor %}

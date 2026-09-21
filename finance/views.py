@@ -92,6 +92,28 @@ def category_breakdown(user, type_="expense", start=None, end=None, currency=Non
         colors.append(row["category__color"] or "#10b981")
     return labels, data, colors
 
+def apply_transaction_filters(qs, request):
+    """Apply the same filter query params used on the transactions list."""
+    q = request.GET.get("q", "").strip()
+    type_ = request.GET.get("type", "")
+    category_id = request.GET.get("category", "")
+    currency_code = request.GET.get("currency", "")
+    start = request.GET.get("start", "")
+    end = request.GET.get("end", "")
+
+    if q:
+        qs = qs.filter(Q(description__icontains=q) | Q(notes__icontains=q))
+    if type_ in ("income", "expense"):
+        qs = qs.filter(type=type_)
+    if category_id:
+        qs = qs.filter(category_id=category_id)
+    if currency_code:
+        qs = qs.filter(currency__code=currency_code)
+    if start:
+        qs = qs.filter(date__gte=start)
+    if end:
+        qs = qs.filter(date__lte=end)
+    return qs
 
 
 # ─────────────────────────────────────────────────────────
@@ -290,28 +312,14 @@ class TransactionListView(LoginRequiredMixin, ListView):
     paginate_by = 15
 
     def get_queryset(self):
-        qs = Transaction.objects.filter(user=self.request.user).select_related("category", "currency")
-        q = self.request.GET.get("q", "").strip()
-        type_ = self.request.GET.get("type", "")
-        category_id = self.request.GET.get("category", "")
-        currency_code = self.request.GET.get("currency", "")
-        start = self.request.GET.get("start", "")
-        end = self.request.GET.get("end", "")
+        qs = (
+            Transaction.objects
+            .filter(user=self.request.user)
+            .select_related("category", "currency")
+        )
+        qs = apply_transaction_filters(qs, self.request)
+
         sort = self.request.GET.get("sort", "newest")
-
-        if q:
-            qs = qs.filter(Q(description__icontains=q) | Q(notes__icontains=q))
-        if type_ in ("income", "expense"):
-            qs = qs.filter(type=type_)
-        if category_id:
-            qs = qs.filter(category_id=category_id)
-        if currency_code:
-            qs = qs.filter(currency__code=currency_code)
-        if start:
-            qs = qs.filter(date__gte=start)
-        if end:
-            qs = qs.filter(date__lte=end)
-
         sort_map = {
             "newest": "-date",
             "oldest": "date",
@@ -319,7 +327,7 @@ class TransactionListView(LoginRequiredMixin, ListView):
             "lowest": "amount",
         }
         return qs.order_by(sort_map.get(sort, "-date"))
-
+    
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         user = self.request.user
@@ -501,27 +509,18 @@ class ExportCSVView(LoginRequiredMixin, View):
             .select_related("category", "currency")
             .order_by("-date")
         )
+        qs = apply_transaction_filters(qs, request)
 
         response = HttpResponse(content_type="text/csv")
         filename = f"financeflow_transactions_{date.today().isoformat()}.csv"
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
-
-        # UTF-8 BOM so Excel opens it correctly with symbols like ₦, €, £
         response.write("\ufeff")
 
         writer = csv.writer(response)
         writer.writerow([
-            "Date",
-            "Type",
-            "Amount",
-            "Currency Code",
-            "Currency Symbol",
-            "Category",
-            "Description",
-            "Notes",
-            "Created At",
+            "Date", "Type", "Amount", "Currency Code", "Currency Symbol",
+            "Category", "Description", "Notes", "Created At",
         ])
-
         for t in qs:
             writer.writerow([
                 t.date.isoformat() if t.date else "",
@@ -534,8 +533,9 @@ class ExportCSVView(LoginRequiredMixin, View):
                 t.notes or "",
                 t.created_at.strftime("%Y-%m-%d %H:%M") if t.created_at else "",
             ])
-
         return response
+
+
 
 # ─────────────────────────────────────────────────────────
 # Categories
@@ -837,12 +837,13 @@ class ExportExcelView(LoginRequiredMixin, View):
             cell.alignment = header_align
             cell.border = thin_border
 
-        # Fetch transactions
+        # Fetch transactions (respect current filters)
         qs = (
             Transaction.objects.filter(user=request.user)
             .select_related("category", "currency")
             .order_by("-date")
         )
+        qs = apply_transaction_filters(qs, request)
 
         income_fill = PatternFill("solid", fgColor="ecfdf5")
         expense_fill = PatternFill("solid", fgColor="fff1f2")
@@ -956,6 +957,9 @@ class ExportExcelView(LoginRequiredMixin, View):
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         wb.save(response)
         return response
+    
+    
+    
     
     
 from .forms import BulkTransactionFormSet

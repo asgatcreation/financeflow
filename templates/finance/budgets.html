@@ -25,10 +25,13 @@
                         {{ b.currency.flag|default:"" }} {{ b.currency.code|default:"" }} · {{ b.month|stringformat:"02d" }}/{{ b.year }}
                     </div>
                 </div>
-                <div class="bud-v3-actions">
-                    <a href="{% url 'finance:budget_update' b.pk %}" class="txn-action">✏️</a>
-                    <a href="{% url 'finance:budget_delete' b.pk %}" class="txn-action txn-action-del">🗑️</a>
-                </div>
+                    <div class="bud-v3-actions">
+                        <a href="{% url 'finance:budget_update' b.pk %}" class="txn-action">✏️</a>
+                        <button type="button" class="txn-action txn-action-del" style="border:none;cursor:pointer;"
+                                data-delete-url="{% url 'finance:budget_delete' b.pk %}"
+                                data-delete-name="{{ b.category.name|escapejs }} budget"
+                                data-delete-type="budget">🗑️</button>
+                    </div>
             </div>
 
             <div class="bud-v3-figures">

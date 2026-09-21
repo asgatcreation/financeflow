@@ -694,5 +694,185 @@
             });
         })();
     </script>
+    <!-- ═══ DELETE CONFIRM MODAL ═══ -->
+    <div class="del-modal" id="delModal" aria-hidden="true">
+        <div class="del-backdrop" data-del-close></div>
+        <div class="del-panel" role="dialog" aria-modal="true" aria-labelledby="delTitle">
+            <div class="del-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                    <path d="M10 11v6M14 11v6"/>
+                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                </svg>
+            </div>
+            <h3 class="del-title" id="delTitle">Delete this item?</h3>
+            <p class="del-desc" id="delDesc">This action cannot be undone.</p>
+
+            <form method="post" class="del-form" id="delForm">
+                {% csrf_token %}
+                <div class="del-actions">
+                    <button type="button" class="del-btn del-btn-cancel" data-del-close>Cancel</button>
+                    <button type="submit" class="del-btn del-btn-confirm">Yes, delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <style>
+        .del-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1200;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+        .del-modal.open { display: flex; animation: delFadeIn 0.2s ease-out; }
+        @keyframes delFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .del-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(6px);
+            cursor: pointer;
+        }
+        .del-panel {
+            position: relative;
+            background: #ffffff;
+            border-radius: 22px;
+            padding: 2rem 1.75rem 1.5rem;
+            max-width: 420px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 30px 60px -20px rgba(15, 23, 42, 0.35);
+            animation: delCardIn 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes delCardIn {
+            from { opacity: 0; transform: scale(0.94) translateY(12px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .del-icon {
+            width: 64px; height: 64px;
+            border-radius: 18px;
+            background: linear-gradient(135deg, #fff1f2, #ffe4e6);
+            color: #e11d48;
+            display: grid; place-items: center;
+            margin: 0 auto 1.15rem;
+        }
+
+        .del-title {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: #0f172a;
+            margin: 0 0 0.5rem 0;
+        }
+        .del-desc {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #64748b;
+            line-height: 1.55;
+            margin: 0 0 1.5rem 0;
+            padding: 0 0.5rem;
+        }
+        .del-desc strong {
+            color: #0f172a;
+            font-weight: 700;
+        }
+
+        .del-form { margin: 0; }
+        .del-actions {
+            display: flex;
+            gap: 0.6rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .del-btn {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            padding: 0.75rem 1.35rem;
+            border-radius: 12px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: 1.5px solid transparent;
+            transition: all 0.15s;
+            letter-spacing: -0.005em;
+        }
+        .del-btn-cancel {
+            background: #f1f5f9;
+            color: #0f172a;
+            border-color: #e2e8f0;
+        }
+        .del-btn-cancel:hover {
+            background: #e2e8f0;
+            border-color: #cbd5e1;
+        }
+        .del-btn-confirm {
+            background: #e11d48;
+            color: #fff;
+            box-shadow: 0 6px 16px rgba(225, 29, 72, 0.28);
+        }
+        .del-btn-confirm:hover {
+            background: #be123c;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 24px rgba(225, 29, 72, 0.4);
+        }
+    </style>
+
+    <script>
+        (function () {
+            var modal = document.getElementById('delModal');
+            if (!modal) return;
+            var form = document.getElementById('delForm');
+            var title = document.getElementById('delTitle');
+            var desc = document.getElementById('delDesc');
+
+            function open(url, itemName, itemType) {
+                form.action = url;
+                if (itemName) {
+                    title.textContent = 'Delete ' + (itemType || 'item') + '?';
+                    desc.innerHTML = 'Are you sure you want to delete <strong>' + itemName + '</strong>? This can\'t be undone.';
+                }
+                modal.classList.add('open');
+                modal.setAttribute('aria-hidden', 'false');
+                document.body.style.overflow = 'hidden';
+            }
+            function close() {
+                modal.classList.remove('open');
+                modal.setAttribute('aria-hidden', 'true');
+                document.body.style.overflow = '';
+            }
+
+            // Attach to any element with [data-delete-url]
+            document.addEventListener('click', function (e) {
+                var trigger = e.target.closest('[data-delete-url]');
+                if (trigger) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    open(
+                        trigger.getAttribute('data-delete-url'),
+                        trigger.getAttribute('data-delete-name'),
+                        trigger.getAttribute('data-delete-type')
+                    );
+                    return;
+                }
+                if (e.target.closest('[data-del-close]')) {
+                    e.preventDefault();
+                    close();
+                }
+            });
+
+            // Esc to close
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && modal.classList.contains('open')) close();
+            });
+        })();
+    </script>
 </body>
 </html>

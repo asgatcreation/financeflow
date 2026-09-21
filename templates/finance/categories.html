@@ -24,7 +24,10 @@
                     </div>
                     <div class="category-actions">
                         <a href="{% url 'finance:category_update' c.pk %}" class="icon-btn" title="Edit">✏️</a>
-                        <a href="{% url 'finance:category_delete' c.pk %}" class="icon-btn" title="Delete">🗑️</a>
+                        <button type="button" class="icon-btn" title="Delete" style="border:none;cursor:pointer;"
+                                data-delete-url="{% url 'finance:category_delete' c.pk %}"
+                                data-delete-name="{{ c.icon }} {{ c.name }}"
+                                data-delete-type="category">🗑️</button>
                     </div>
                 </div>
             {% endfor %}
