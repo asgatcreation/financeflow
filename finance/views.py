@@ -135,6 +135,10 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         today = date.today()
         first, last = month_range(today)
 
+        # Previous month range
+        prev_last = first - timedelta(days=1)
+        prev_first = prev_last.replace(day=1)
+
         user_currencies = list(
             UserCurrency.objects.filter(user=user).select_related("currency")
         )
@@ -145,11 +149,9 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             ctx.update({
                 "user_currencies": [], "per_currency": [], "recent": [],
                 "budgets": [], "now_month": today.strftime("%B %Y"),
-                "chart_labels": json.dumps([]),
-                "chart_income": json.dumps([]),
-                "chart_expense": json.dumps([]),
-                "cat_labels": json.dumps([]), "cat_data": json.dumps([]),
-                "cat_colors": json.dumps([]),
+                "chart_labels": json.dumps([]), "chart_income": json.dumps([]),
+                "chart_expense": json.dumps([]), "cat_labels": json.dumps([]),
+                "cat_data": json.dumps([]), "cat_colors": json.dumps([]),
                 "all_currency_series": json.dumps([]),
                 "no_currencies": True,
             })
@@ -176,7 +178,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 "m_net": m_income - m_expense,
             })
 
-        # Charts use primary or ?chart=CODE
+        # Charts currency (defaults to primary)
         chart_code = self.request.GET.get("chart", "").upper()
         pc = next((c for c in user_currency_list if c.code == chart_code), None)
         if not pc:
@@ -186,17 +188,49 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         cat_labels, cat_data, cat_colors = category_breakdown(user, "expense", first, last, currency=pc)
         inc_cat_labels, inc_cat_data, inc_cat_colors = category_breakdown(user, "income", first, last, currency=pc)
 
-        # ── All-currency series (normalized to primary using rough FX or raw) ──
+        # ═══ KPI strip: always use the PRIMARY currency ═══
+        primary_row = next((x for x in per_currency if x["is_primary"]), per_currency[0])
+        kpi_cur = primary_row["currency"]
+
+        # Previous month for the primary currency
+        prev_qs = Transaction.objects.filter(
+            user=user, currency=kpi_cur,
+            date__gte=prev_first, date__lte=prev_last,
+        )
+        prev_income  = prev_qs.filter(type="income").aggregate(t=Sum("amount"))["t"] or Decimal("0")
+        prev_expense = prev_qs.filter(type="expense").aggregate(t=Sum("amount"))["t"] or Decimal("0")
+        prev_net = prev_income - prev_expense
+
+        def _build_trend(current, prev, invert=False):
+            """Returns dict {pct, is_up, is_good} or None if no comparison possible."""
+            try:
+                if not prev or float(prev) == 0:
+                    return None
+                pct = float((current - prev) / prev * 100)
+                is_up = pct >= 0
+                is_good = (not is_up) if invert else is_up
+                return {"pct": round(abs(pct), 1), "is_up": is_up, "is_good": is_good}
+            except Exception:
+                return None
+
+        kpi_income  = primary_row["m_income"]
+        kpi_expense = primary_row["m_expense"]
+        kpi_net     = primary_row["m_net"]
+
+        income_trend  = _build_trend(kpi_income, prev_income)
+        expense_trend = _build_trend(kpi_expense, prev_expense, invert=True)
+        net_trend     = _build_trend(kpi_net, prev_net)
+
+        # All-currency series
         all_currency_series = []
         palette = ["#10b981", "#0ea5e9", "#8b5cf6", "#f59e0b", "#f43f5e"]
         for i, c in enumerate(user_currency_list):
-            _, c_income, c_expense = monthly_series(user, 6, currency=c)
-            c_net = [a - b for a, b in zip(c_income, c_expense)]
+            _, ci, ce = monthly_series(user, 6, currency=c)
+            cn = [a - b for a, b in zip(ci, ce)]
             all_currency_series.append({
-                "code": c.code,
-                "flag": c.flag,
+                "code": c.code, "flag": c.flag,
                 "color": palette[i % len(palette)],
-                "net_series": c_net,
+                "net_series": cn,
             })
 
         recent = (
@@ -227,9 +261,17 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             "chart_currency": pc,
             "all_currency_series": json.dumps(all_currency_series),
             "no_currencies": False,
+
+            # ═══ KPI strip context ═══
+            "kpi_currency": kpi_cur,
+            "kpi_income": kpi_income,
+            "kpi_expense": kpi_expense,
+            "kpi_net": kpi_net,
+            "income_trend": income_trend,
+            "expense_trend": expense_trend,
+            "net_trend": net_trend,
         })
         return ctx
-
 
 
 

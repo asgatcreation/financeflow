@@ -21,7 +21,7 @@
     </div>
     {% else %}
 
-    <!-- COMPACT KPI STRIP -->
+        <!-- COMPACT KPI STRIP -->
     <section class="d7-kpis">
         {% for row in per_currency %}{% if row.is_primary %}
         <div class="d7-kpi d7-kpi-dark">
@@ -36,22 +36,49 @@
 
         <div class="d7-kpi">
             <div class="d7-kpi-label">Income · this month</div>
-            <div class="d7-kpi-value pos">＋{{ chart_currency.symbol }}{{ per_currency.0.m_income|floatformat:0 }}</div>
-            <div class="d7-kpi-foot">{{ chart_currency.code }}</div>
+            <div class="d7-kpi-value pos">＋{{ kpi_currency.symbol }}{{ kpi_income|floatformat:0 }}</div>
+            <div class="d7-kpi-foot">
+                <span>{{ kpi_currency.code }}</span>
+                {% if income_trend %}
+                    <span class="d7-kpi-trend {% if income_trend.is_good %}trend-good{% else %}trend-bad{% endif %}">
+                        {% if income_trend.is_up %}▲{% else %}▼{% endif %} {{ income_trend.pct }}%
+                    </span>
+                {% else %}
+                    <span class="d7-kpi-trend trend-new">NEW</span>
+                {% endif %}
+            </div>
         </div>
 
         <div class="d7-kpi">
             <div class="d7-kpi-label">Expenses · this month</div>
-            <div class="d7-kpi-value neg">－{{ chart_currency.symbol }}{{ per_currency.0.m_expense|floatformat:0 }}</div>
-            <div class="d7-kpi-foot">{{ chart_currency.code }}</div>
+            <div class="d7-kpi-value neg">－{{ kpi_currency.symbol }}{{ kpi_expense|floatformat:0 }}</div>
+            <div class="d7-kpi-foot">
+                <span>{{ kpi_currency.code }}</span>
+                {% if expense_trend %}
+                    <span class="d7-kpi-trend {% if expense_trend.is_good %}trend-good{% else %}trend-bad{% endif %}">
+                        {% if expense_trend.is_up %}▲{% else %}▼{% endif %} {{ expense_trend.pct }}%
+                    </span>
+                {% else %}
+                    <span class="d7-kpi-trend trend-new">NEW</span>
+                {% endif %}
+            </div>
         </div>
 
         <div class="d7-kpi">
             <div class="d7-kpi-label">Net · this month</div>
-            <div class="d7-kpi-value {% if per_currency.0.m_net >= 0 %}pos{% else %}neg{% endif %}">
-                {% if per_currency.0.m_net < 0 %}－{% else %}＋{% endif %}{{ chart_currency.symbol }}{{ per_currency.0.m_net|floatformat:0|cut:"-" }}
+            <div class="d7-kpi-value {% if kpi_net >= 0 %}pos{% else %}neg{% endif %}">
+                {% if kpi_net < 0 %}－{% else %}＋{% endif %}{{ kpi_currency.symbol }}{{ kpi_net|floatformat:0|cut:"-" }}
             </div>
-            <div class="d7-kpi-foot">{{ chart_currency.code }}</div>
+            <div class="d7-kpi-foot">
+                <span>{{ kpi_currency.code }}</span>
+                {% if net_trend %}
+                    <span class="d7-kpi-trend {% if net_trend.is_good %}trend-good{% else %}trend-bad{% endif %}">
+                        {% if net_trend.is_up %}▲{% else %}▼{% endif %} {{ net_trend.pct }}%
+                    </span>
+                {% else %}
+                    <span class="d7-kpi-trend trend-new">NEW</span>
+                {% endif %}
+            </div>
         </div>
     </section>
 

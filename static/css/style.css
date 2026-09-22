@@ -4760,6 +4760,52 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.5; cursor: po
     text-decoration: underline;
 }
 
+/* ══════════════════════════════════════════════════════
+   KPI TREND INDICATORS
+   ══════════════════════════════════════════════════════ */
+.d7-kpi-trend {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: -0.005em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.d7-kpi-trend.trend-good {
+    background: rgba(16, 185, 129, 0.12);
+    color: #047857;
+}
+.d7-kpi-trend.trend-bad {
+    background: rgba(244, 63, 94, 0.12);
+    color: #be123c;
+}
+.d7-kpi-trend.trend-new {
+    background: rgba(148, 163, 184, 0.15);
+    color: #64748b;
+    letter-spacing: 0.08em;
+    font-size: 0.6rem;
+}
+
+/* Dark featured card — softer tones on dark bg */
+.d7-kpi-dark .d7-kpi-trend.trend-good {
+    background: rgba(94, 234, 212, 0.15);
+    color: #5eead4;
+}
+.d7-kpi-dark .d7-kpi-trend.trend-bad {
+    background: rgba(253, 164, 175, 0.15);
+    color: #fda4af;
+}
+.d7-kpi-dark .d7-kpi-trend.trend-new {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.5);
+}
+
 
 
 
