@@ -1,0 +1,328 @@
+{% extends "base_app.html" %}
+{% block title %}{{ page_title }} · FinanceFlow{% endblock %}
+
+{% block content %}
+<div class="app-content">
+
+    <nav class="rf-crumb">
+        <a href="{% url 'finance:recurring_list' %}">Recurring</a>
+        <span>/</span>
+        <span>{{ page_title }}</span>
+    </nav>
+
+    <header class="rf-header">
+        <h1>{{ page_title }}</h1>
+        <p>Set the amount, when it starts, and how often it repeats.</p>
+    </header>
+
+    <form method="post" id="recurringForm" autocomplete="off">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="rf-alert">
+            {% for err in form.non_field_errors %}<div>{{ err }}</div>{% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="rf-two-col">
+
+            <!-- MAIN FORM -->
+            <div class="rf-panel">
+
+                <div class="rf-group">
+                    <div class="rf-group-label">Type</div>
+                    <div class="rf-pills" data-pill-group="type">
+                        {{ form.type }}
+                        <button type="button" class="rf-pill rf-pill-out" data-pill-value="expense">
+                            <span class="rf-pill-dot"></span> Expense
+                        </button>
+                        <button type="button" class="rf-pill rf-pill-in" data-pill-value="income">
+                            <span class="rf-pill-dot"></span> Income
+                        </button>
+                    </div>
+                </div>
+
+                <div class="rf-group">
+                    <div class="rf-group-label">Amount</div>
+                    <div class="rf-inline">
+                        <div class="rf-amount-input">
+                            <span class="rf-amount-sym" id="amountPrefix">$</span>
+                            {{ form.amount }}
+                        </div>
+                        {{ form.currency }}
+                    </div>
+                    {% if form.amount.errors %}<div class="rf-err">{{ form.amount.errors.0 }}</div>{% endif %}
+                </div>
+
+                <div class="rf-group">
+                    <div class="rf-group-label">Description</div>
+                    {{ form.description }}
+                    {% if form.description.errors %}<div class="rf-err">{{ form.description.errors.0 }}</div>{% endif %}
+                </div>
+
+                <div class="rf-group">
+                    <div class="rf-group-label">Category <span class="rf-lbl-opt">optional</span></div>
+                    {{ form.category }}
+                </div>
+
+                <div class="rf-group">
+                    <div class="rf-group-label">Notes <span class="rf-lbl-opt">optional</span></div>
+                    {{ form.notes }}
+                </div>
+
+                <div class="rf-divider"></div>
+
+                <div class="rf-group">
+                    <div class="rf-group-label">Repeat</div>
+                    <div class="rf-pills" data-pill-group="freq">
+                        {{ form.frequency }}
+                        <button type="button" class="rf-pill" data-pill-value="daily">Daily</button>
+                        <button type="button" class="rf-pill" data-pill-value="weekly">Weekly</button>
+                        <button type="button" class="rf-pill" data-pill-value="monthly">Monthly</button>
+                        <button type="button" class="rf-pill" data-pill-value="yearly">Yearly</button>
+                    </div>
+                </div>
+
+                <div class="rf-inline">
+                    <div class="rf-group rf-group-half">
+                        <div class="rf-group-label">First run</div>
+                        {{ form.next_run_datetime }}
+                        {% if form.next_run_datetime.errors %}<div class="rf-err">{{ form.next_run_datetime.errors.0 }}</div>{% endif %}
+                    </div>
+                    <div class="rf-group rf-group-half">
+                        <div class="rf-group-label">End <span class="rf-lbl-opt">optional</span></div>
+                        {{ form.end_datetime }}
+                        {% if form.end_datetime.errors %}<div class="rf-err">{{ form.end_datetime.errors.0 }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <label class="rf-toggle">
+                    {{ form.is_active }}
+                    <span class="rf-toggle-track"><span class="rf-toggle-thumb"></span></span>
+                    <span class="rf-toggle-text">
+                        <strong>Start immediately</strong>
+                        <span>Uncheck to save as paused</span>
+                    </span>
+                </label>
+
+            </div>
+
+            <!-- SIDEBAR SUMMARY -->
+            <aside class="rf-side">
+                <div class="rf-summary">
+                    <div class="rf-summary-head">
+                        <span class="rf-summary-label">Summary</span>
+                        <span class="rf-summary-live"><span class="rf-summary-live-dot"></span> Live</span>
+                    </div>
+
+                    <div class="rf-summary-amount">
+                        <span class="rf-summary-sym" id="summarySym">$</span>
+                        <span class="rf-summary-val" id="summaryVal">0</span>
+                    </div>
+
+                    <div class="rf-summary-rows">
+                        <div class="rf-summary-row"><span>Frequency</span><strong id="summaryFreq">Monthly</strong></div>
+                        <div class="rf-summary-row"><span>First run</span><strong id="summaryFirst">—</strong></div>
+                    </div>
+
+                    <div class="rf-summary-count">
+                        <span class="rf-summary-count-label">Creates</span>
+                        <span class="rf-summary-count-val" id="summaryCount">—</span>
+                        <span class="rf-summary-count-unit" id="summaryCountUnit">transactions</span>
+                    </div>
+
+                    <div class="rf-summary-dates" id="summaryDates">
+                        <p class="rf-summary-empty">Pick a first run date to preview.</p>
+                    </div>
+
+                    <div class="rf-summary-total" id="summaryTotalWrap" style="display:none;">
+                        <span>Total</span>
+                        <strong id="summaryTotal">—</strong>
+                    </div>
+
+                    <div class="rf-summary-error" id="summaryError" style="display:none;"></div>
+                </div>
+
+                <div class="rf-actions">
+                    <a href="{% url 'finance:recurring_list' %}" class="rf-btn rf-btn-ghost">Cancel</a>
+                    <button type="submit" class="rf-btn rf-btn-primary">{{ button_text }}</button>
+                </div>
+            </aside>
+
+        </div>
+    </form>
+</div>
+
+<script id="currencyMap" type="application/json">{
+    {% for uc in user_currencies %}"{{ uc.currency.id }}": {"symbol": "{{ uc.currency.symbol|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}
+}</script>
+
+<script id="categoryMap" type="application/json">[
+    {% for c in form.fields.category.queryset %}{"id": "{{ c.id }}", "name": "{{ c.name|escapejs }}", "icon": "{{ c.icon|escapejs }}", "type": "{{ c.type }}"}{% if not forloop.last %},{% endif %}{% endfor %}
+]</script>
+
+<script>
+(function () {
+    "use strict";
+    var CURRENCIES = JSON.parse(document.getElementById('currencyMap').textContent || '{}');
+    var CATEGORIES = JSON.parse(document.getElementById('categoryMap').textContent || '[]');
+
+    var typeSel = document.getElementById('id_type');
+    var amountEl = document.getElementById('id_amount');
+    var curSel = document.getElementById('id_currency');
+    var catSel = document.getElementById('id_category');
+    var freqSel = document.getElementById('id_frequency');
+    var firstEl = document.getElementById('id_next_run_datetime');
+    var endEl = document.getElementById('id_end_datetime');
+
+    var amountPrefix = document.getElementById('amountPrefix');
+    var sumSym = document.getElementById('summarySym');
+    var sumVal = document.getElementById('summaryVal');
+    var sumFreq = document.getElementById('summaryFreq');
+    var sumFirst = document.getElementById('summaryFirst');
+    var sumCount = document.getElementById('summaryCount');
+    var sumCountUnit = document.getElementById('summaryCountUnit');
+    var sumDates = document.getElementById('summaryDates');
+    var sumTotalW = document.getElementById('summaryTotalWrap');
+    var sumTotal = document.getElementById('summaryTotal');
+    var sumError = document.getElementById('summaryError');
+
+    function initPills(groupName, selectEl) {
+        var group = document.querySelector('[data-pill-group="' + groupName + '"]');
+        if (!group || !selectEl) return;
+        var btns = group.querySelectorAll('[data-pill-value]');
+        function sync() {
+            btns.forEach(function (b) {
+                b.classList.toggle('active', b.dataset.pillValue === selectEl.value);
+            });
+        }
+        btns.forEach(function (b) {
+            b.addEventListener('click', function (e) {
+                e.preventDefault();
+                selectEl.value = b.dataset.pillValue;
+                sync();
+                if (groupName === 'type') filterCats();
+                if (groupName === 'freq') updatePreview();
+            });
+        });
+        sync();
+    }
+
+    function filterCats() {
+        if (!catSel || !typeSel) return;
+        var current = catSel.value;
+        var match = CATEGORIES.filter(function (c) { return c.type === typeSel.value; });
+        catSel.innerHTML = '<option value="">---------</option>';
+        match.forEach(function (c) {
+            var o = document.createElement('option');
+            o.value = c.id;
+            o.textContent = c.icon + ' ' + c.name;
+            catSel.appendChild(o);
+        });
+        if (match.some(function (c) { return String(c.id) === current; })) catSel.value = current;
+    }
+
+    function fmtDT(d) {
+        var mo = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        var h = String(d.getHours()).padStart(2, '0');
+        var m = String(d.getMinutes()).padStart(2, '0');
+        return mo[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear() + ' · ' + h + ':' + m;
+    }
+
+    function advance(d, f) {
+        var r = new Date(d.getTime());
+        if (f === 'daily') r.setDate(r.getDate() + 1);
+        else if (f === 'weekly') r.setDate(r.getDate() + 7);
+        else if (f === 'monthly') { var od = r.getDate(); r.setMonth(r.getMonth() + 1); if (r.getDate() !== od) r.setDate(0); }
+        else if (f === 'yearly') { var oy = r.getDate(); r.setFullYear(r.getFullYear() + 1); if (r.getDate() !== oy) r.setDate(0); }
+        return r;
+    }
+
+    function updatePreview() {
+        var amt = parseFloat(amountEl.value || 0);
+        var sym = (CURRENCIES[curSel.value] || {}).symbol || '$';
+        var freq = freqSel.value;
+        var freqLabel = freqSel.options[freqSel.selectedIndex] ? freqSel.options[freqSel.selectedIndex].text : 'Monthly';
+
+        amountPrefix.textContent = sym;
+        sumSym.textContent = sym;
+        sumVal.textContent = Number(amt || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        sumFreq.textContent = freqLabel;
+        sumError.style.display = 'none';
+
+        if (!firstEl.value) {
+            sumFirst.textContent = '—';
+            sumCount.textContent = '—';
+            sumCountUnit.textContent = 'transactions';
+            sumDates.innerHTML = '<p class="rf-summary-empty">Pick a first run date to preview.</p>';
+            sumTotalW.style.display = 'none';
+            return;
+        }
+
+        var first = new Date(firstEl.value);
+        var end = endEl.value ? new Date(endEl.value) : null;
+        sumFirst.textContent = fmtDT(first);
+
+        if (end && end < first) {
+            sumError.textContent = 'End date must be on or after the first run.';
+            sumError.style.display = 'block';
+            sumCount.textContent = '—';
+            sumTotalW.style.display = 'none';
+            return;
+        }
+
+        var dates = [];
+        var cur = new Date(first.getTime());
+        if (end) {
+            var safety = 0;
+            while (cur <= end && dates.length < 200 && safety < 200) {
+                dates.push(new Date(cur.getTime()));
+                cur = advance(cur, freq);
+                safety++;
+            }
+            sumCount.textContent = dates.length;
+            sumCountUnit.textContent = 'transactions';
+        } else {
+            for (var i = 0; i < 5; i++) { dates.push(new Date(cur.getTime())); cur = advance(cur, freq); }
+            sumCount.textContent = '∞';
+            sumCountUnit.textContent = 'forever';
+        }
+
+        var show = end ? Math.min(dates.length, 5) : dates.length;
+        var html = '';
+        for (var j = 0; j < show; j++) {
+            html += '<div class="rf-summary-date"><span class="rf-summary-date-dot"></span>' + fmtDT(dates[j]) + '</div>';
+        }
+        if (end && dates.length > 5) {
+            html += '<div class="rf-summary-more">+' + (dates.length - 5) + ' more</div>';
+        }
+        sumDates.innerHTML = html;
+
+        if (end && amt > 0) {
+            sumTotal.textContent = sym + (amt * dates.length).toLocaleString(undefined, { maximumFractionDigits: 2 });
+            sumTotalW.style.display = 'flex';
+        } else {
+            sumTotalW.style.display = 'none';
+        }
+    }
+
+    initPills('type', typeSel);
+    initPills('freq', freqSel);
+    filterCats();
+
+    [amountEl, curSel, freqSel, firstEl, endEl].forEach(function (el) {
+        if (!el) return;
+        el.addEventListener('input', updatePreview);
+        el.addEventListener('change', updatePreview);
+    });
+
+    if (firstEl) {
+        var now = new Date();
+        var pad = function (n) { return String(n).padStart(2, '0'); };
+        firstEl.min = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) + 'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+    }
+
+    updatePreview();
+})();
+</script>
+{% endblock %}

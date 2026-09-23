@@ -7,7 +7,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.db.models import Q, Sum
 from django.db.models.functions import TruncMonth
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.views.generic import (
@@ -20,6 +20,10 @@ from .forms import CategoryForm, TransactionForm, BudgetForm, UserCurrencyForm
 from django.shortcuts import render
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from .models import RecurringTransaction
+from .forms import RecurringTransactionForm
+from .models import process_due_recurring
+
 
 
 # ─────────────────────────────────────────────────────────
@@ -132,6 +136,10 @@ class DashboardView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         user = self.request.user
+        try:
+            process_due_recurring(user=user)
+        except Exception:
+            pass
         today = date.today()
         first, last = month_range(today)
 
@@ -1057,3 +1065,168 @@ class BulkTransactionView(LoginRequiredMixin, View):
 
         return render(request, self.template_name, self._ctx(request, formset))
 
+
+
+# ═══════════════════════════════════════════════════════════
+# RECURRING TRANSACTION VIEWS
+# ═══════════════════════════════════════════════════════════
+class RecurringListView(LoginRequiredMixin, ListView):
+    model = RecurringTransaction
+    template_name = "finance/recurring_list.html"
+    context_object_name = "recurring"
+
+    def get_queryset(self):
+        # Auto-process any due recurring transactions
+        try:
+            process_due_recurring(user=self.request.user)
+        except Exception:
+            pass
+
+        return (
+            RecurringTransaction.objects
+            .filter(user=self.request.user)
+            .select_related("category", "currency")
+            .order_by("-is_active", "next_run_datetime")
+        )
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["active_count"] = self.get_queryset().filter(is_active=True).count()
+        ctx["paused_count"] = self.get_queryset().filter(is_active=False).count()
+        return ctx
+
+
+class RunRecurringNowView(LoginRequiredMixin, View):
+    """Manually trigger a recurring transaction immediately."""
+    def post(self, request, pk):
+        rec = get_object_or_404(RecurringTransaction, pk=pk, user=request.user)
+        # Create the transaction right now with the schedule's amount/type/etc
+        Transaction.objects.create(
+            user=request.user,
+            type=rec.type,
+            amount=rec.amount,
+            currency=rec.currency,
+            category=rec.category,
+            description=rec.description,
+            notes=rec.notes,
+            date=timezone.now().date(),
+        )
+        # Bump the counter but don't move the next_run (user triggered this manually)
+        rec.runs_completed += 1
+        rec.last_run_datetime = timezone.now()
+        rec.save(update_fields=["runs_completed", "last_run_datetime", "updated_at"])
+        messages.success(request, f"✅ Added: {rec.description}")
+        return redirect("finance:recurring_list")
+
+class RecurringCreateView(LoginRequiredMixin, CreateView):
+    model = RecurringTransaction
+    form_class = RecurringTransactionForm
+    template_name = "finance/recurring_form.html"
+    success_url = reverse_lazy("finance:recurring_list")
+
+    def get_form_kwargs(self):
+        kw = super().get_form_kwargs()
+        kw["user"] = self.request.user
+        return kw
+
+    def form_valid(self, form):
+        form.instance.user = self.request.user
+        messages.success(self.request, "Recurring transaction created.")
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["page_title"] = "New recurring"
+        ctx["button_text"] = "Create recurring"
+        ctx["user_currencies"] = (
+            UserCurrency.objects.filter(user=self.request.user)
+            .select_related("currency")
+            .order_by("-is_primary", "currency__code")
+        )
+        return ctx
+
+
+class RecurringUpdateView(LoginRequiredMixin, UpdateView):
+    model = RecurringTransaction
+    form_class = RecurringTransactionForm
+    template_name = "finance/recurring_form.html"
+    success_url = reverse_lazy("finance:recurring_list")
+
+    def get_queryset(self):
+        return RecurringTransaction.objects.filter(user=self.request.user)
+
+    def get_form_kwargs(self):
+        kw = super().get_form_kwargs()
+        kw["user"] = self.request.user
+        return kw
+
+    def form_valid(self, form):
+        messages.success(self.request, "Recurring transaction updated.")
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["page_title"] = "Edit recurring"
+        ctx["button_text"] = "Save changes"
+        ctx["user_currencies"] = (
+            UserCurrency.objects.filter(user=self.request.user)
+            .select_related("currency")
+            .order_by("-is_primary", "currency__code")
+        )
+        return ctx
+
+class RecurringDeleteView(LoginRequiredMixin, DeleteView):
+    model = RecurringTransaction
+    success_url = reverse_lazy("finance:recurring_list")
+
+    def get_queryset(self):
+        return RecurringTransaction.objects.filter(user=self.request.user)
+
+    def get(self, request, *args, **kwargs):
+        # Skip the confirm page — delete directly (modal handles confirmation client-side)
+        return self.post(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        messages.success(self.request, "Recurring transaction deleted.")
+        return super().form_valid(form)
+
+
+class RecurringToggleView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        rec = get_object_or_404(RecurringTransaction, pk=pk, user=request.user)
+        rec.is_active = not rec.is_active
+        rec.save(update_fields=["is_active", "updated_at"])
+        if rec.is_active:
+            messages.success(request, f"Resumed: {rec.description}")
+        else:
+            messages.info(request, f"Paused: {rec.description}")
+        return redirect("finance:recurring_list")
+
+
+class ProcessRecurringView(View):
+    """Cron-friendly endpoint: /finance/cron/process-recurring/?token=XYZ"""
+    def get(self, request):
+        import os
+        expected = os.environ.get("CRON_SECRET", "")
+        token = request.GET.get("token", "")
+        if not expected or token != expected:
+            return HttpResponseForbidden("Invalid token")
+        n = process_due_recurring()
+        return JsonResponse({"created": n})
+
+
+class ProcessRecurringNowView(LoginRequiredMixin, View):
+    """AJAX endpoint — checks for due recurrings and processes them."""
+    def post(self, request):
+        try:
+            n = process_due_recurring(user=request.user)
+        except Exception:
+            n = 0
+        return JsonResponse({"created": n})
+
+
+
+
+
+
+  

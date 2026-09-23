@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=11">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <link rel="manifest" href="/manifest.json">
@@ -67,6 +67,9 @@
             </a>
             <a href="{% url 'finance:categories' %}" class="side-link {% if 'categor' in request.resolver_match.url_name %}active{% endif %}">
                 <span class="side-icon">🏷️</span> Categories
+            </a>
+            <a href="{% url 'finance:recurring_list' %}" class="side-link {% if 'recurring' in request.resolver_match.url_name %}active{% endif %}">
+                <span class="side-icon">🔁</span> Recurring
             </a>
 
             <a href="{% url 'finance:currencies' %}" class="side-link {% if 'currenc' in request.resolver_match.url_name %}active{% endif %}">

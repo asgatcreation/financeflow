@@ -5,6 +5,8 @@ from django.utils import timezone
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from decimal import Decimal
+from datetime import date, timedelta
+from calendar import monthrange
 
 
 # ═══════════════════════════════════════════════════════
@@ -227,3 +229,155 @@ def seed_user_defaults(sender, instance, created, **kwargs):
             user=instance, currency=ngn,
             defaults={"is_primary": True}
         )
+
+
+# ═══════════════════════════════════════════════════════════
+# RECURRING TRANSACTIONS
+# ═══════════════════════════════════════════════════════════
+def advance_datetime(dt, freq):
+    """Advance a datetime by one period of the given frequency."""
+    if freq == "daily":
+        return dt + timedelta(days=1)
+    if freq == "weekly":
+        return dt + timedelta(weeks=1)
+    if freq == "monthly":
+        m = dt.month + 1
+        y = dt.year
+        if m > 12:
+            m = 1
+            y += 1
+        last_day = monthrange(y, m)[1]
+        return dt.replace(year=y, month=m, day=min(dt.day, last_day))
+    if freq == "yearly":
+        try:
+            return dt.replace(year=dt.year + 1)
+        except ValueError:
+            return dt.replace(year=dt.year + 1, day=28)
+    return dt
+
+
+class RecurringTransaction(models.Model):
+    FREQUENCY_CHOICES = [
+        ("daily", "Daily"),
+        ("weekly", "Weekly"),
+        ("monthly", "Monthly"),
+        ("yearly", "Yearly"),
+    ]
+    TYPE_CHOICES = [("income", "Income"), ("expense", "Expense")]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="recurring_transactions")
+    type = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    currency = models.ForeignKey(Currency, on_delete=models.PROTECT, related_name="recurring_transactions")
+    category = models.ForeignKey(
+        Category, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="recurring_transactions",
+    )
+    description = models.CharField(max_length=200)
+    notes = models.TextField(blank=True)
+
+    frequency = models.CharField(max_length=10, choices=FREQUENCY_CHOICES, default="monthly")
+
+    start_datetime = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When the schedule first started (set automatically on save)",
+    )
+    next_run_datetime = models.DateTimeField(
+        help_text="When the next transaction will be created",
+    )
+    end_datetime = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Optional — stop repeating after this moment",
+    )
+    last_run_datetime = models.DateTimeField(null=True, blank=True)
+
+    runs_completed = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["next_run_datetime", "-created_at"]
+
+    def __str__(self):
+        return f"{self.description} · {self.get_frequency_display()}"
+
+    def save(self, *args, **kwargs):
+        if not self.start_datetime and self.next_run_datetime:
+            self.start_datetime = self.next_run_datetime
+        super().save(*args, **kwargs)
+
+    def advance(self):
+        self.last_run_datetime = self.next_run_datetime
+        self.next_run_datetime = advance_datetime(self.next_run_datetime, self.frequency)
+        self.runs_completed += 1
+        self.save(update_fields=[
+            "last_run_datetime", "next_run_datetime",
+            "runs_completed", "updated_at",
+        ])
+
+    @property
+    def expected_total(self):
+        """Total number of runs this schedule will produce, or None if infinite."""
+        if not self.end_datetime or not self.start_datetime:
+            return None
+        total = 0
+        cur = self.start_datetime
+        safety = 0
+        while cur <= self.end_datetime and safety < 500:
+            total += 1
+            cur = advance_datetime(cur, self.frequency)
+            safety += 1
+        return total
+
+    @property
+    def progress_display(self):
+        total = self.expected_total
+        if total is None:
+            return f"{self.runs_completed} runs"
+        return f"{self.runs_completed}/{total}"
+
+
+# ═══════════════════════════════════════════════════════════
+# PROCESSING
+# ═══════════════════════════════════════════════════════════
+
+def process_due_recurring(user=None, max_iterations=100):
+    """Create Transaction rows for every due recurring template."""
+    now = timezone.now()
+    qs = RecurringTransaction.objects.filter(is_active=True, next_run_datetime__lte=now)
+    if user is not None:
+        qs = qs.filter(user=user)
+
+    created = 0
+    for rec in qs:
+        iterations = 0
+        while rec.next_run_datetime <= now and iterations < max_iterations:
+            if rec.end_datetime and rec.next_run_datetime > rec.end_datetime:
+                rec.is_active = False
+                rec.save(update_fields=["is_active", "updated_at"])
+                break
+
+            Transaction.objects.create(
+                user=rec.user,
+                type=rec.type,
+                amount=rec.amount,
+                currency=rec.currency,
+                category=rec.category,
+                description=rec.description,
+                notes=rec.notes,
+                date=rec.next_run_datetime.date(),
+            )
+            created += 1
+            rec.advance()
+            iterations += 1
+
+    return created
+
+
+
+
+
+
+

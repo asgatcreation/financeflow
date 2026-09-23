@@ -1,0 +1,285 @@
+{% extends "base_app.html" %}
+{% block title %}Recurring · FinanceFlow{% endblock %}
+
+{% block content %}
+<div class="app-content">
+
+    <header class="rl-header">
+        <div class="rl-header-left">
+            <h1>Recurring</h1>
+            <p>{{ recurring|length }} schedule{{ recurring|length|pluralize }} · auto-creates on their due dates</p>
+        </div>
+        <a href="{% url 'finance:recurring_create' %}" class="rl-new">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New recurring
+        </a>
+    </header>
+
+    <div class="rl-filters">
+        <button type="button" class="rl-filter rl-filter-active" data-filter="all">
+            All <span class="rl-filter-count">{{ recurring|length }}</span>
+        </button>
+        <button type="button" class="rl-filter" data-filter="active">
+            Active <span class="rl-filter-count">{{ active_count }}</span>
+        </button>
+        <button type="button" class="rl-filter" data-filter="paused">
+            Paused <span class="rl-filter-count">{{ paused_count }}</span>
+        </button>
+    </div>
+
+    {% if recurring %}
+    <div class="rl-list" id="recurringList">
+        {% for r in recurring %}
+        <div class="rl-row"
+             data-status="{% if r.is_active %}active{% else %}paused{% endif %}"
+             data-type="{{ r.type }}">
+
+            <div class="rl-row-stripe"></div>
+
+            <div class="rl-row-icon" style="background:{{ r.category.color|default:'#6366f1' }}12; color:{{ r.category.color|default:'#6366f1' }};">
+                {{ r.category.icon|default:"🔁" }}
+            </div>
+
+            <div class="rl-row-main">
+                <div class="rl-row-line1">
+                    <span class="rl-row-title">{{ r.description }}</span>
+                    {% if r.expected_total %}
+                        <span class="rl-progress-pill" title="Runs completed">
+                            <span class="rl-progress-dot"></span>{{ r.runs_completed }}/{{ r.expected_total }}
+                        </span>
+                    {% else %}
+                        <span class="rl-progress-pill rl-progress-pill-infinite">
+                            <span class="rl-progress-dot"></span>{{ r.runs_completed }} runs
+                        </span>
+                    {% endif %}
+                    {% if not r.is_active %}<span class="rl-badge rl-badge-paused">Paused</span>{% endif %}
+                </div>
+                <div class="rl-row-line2">
+                    <span class="rl-freq-chip">{{ r.get_frequency_display }}</span>
+                    <span class="rl-meta-sep">·</span>
+                    <span>{{ r.currency.flag }} {{ r.currency.code }}</span>
+                    {% if r.category %}
+                        <span class="rl-meta-sep">·</span>
+                        <span>{{ r.category.name }}</span>
+                    {% endif %}
+                    <span class="rl-meta-sep">·</span>
+                    <span class="rl-meta-label">Started</span>
+                    <span class="rl-meta-val">{{ r.start_datetime|date:"M d"|default:"—" }}</span>
+                    <span class="rl-meta-sep">·</span>
+                    <span class="rl-meta-label">Next</span>
+                    <span class="rl-meta-val rl-meta-next">
+                        {{ r.next_run_datetime|date:"M d" }}
+                        <span class="rl-time-chip">{{ r.next_run_datetime|date:"H:i" }}</span>
+                    </span>
+                </div>
+            </div>
+
+            <div class="rl-row-amount {% if r.type == 'income' %}pos{% else %}neg{% endif %}">
+                {% if r.type == 'income' %}＋{% else %}－{% endif %}{{ r.currency.symbol }}{{ r.amount|floatformat:0 }}
+            </div>
+
+            <div class="rl-row-actions">
+                <button type="button" class="rl-act rl-act-run" title="Run now"
+                        data-run-url="{% url 'finance:recurring_run_now' r.pk %}"
+                        data-run-name="{{ r.description|escapejs }}">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+                </button>
+                <button type="button" class="rl-act {% if r.is_active %}rl-act-pause{% else %}rl-act-resume{% endif %}"
+                        title="{% if r.is_active %}Pause{% else %}Resume{% endif %}"
+                        data-toggle-url="{% url 'finance:recurring_toggle' r.pk %}"
+                        data-toggle-name="{{ r.description|escapejs }}"
+                        data-toggle-action="{% if r.is_active %}pause{% else %}resume{% endif %}">
+                    {% if r.is_active %}
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+                    {% else %}
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+                    {% endif %}
+                </button>
+                <a href="{% url 'finance:recurring_update' r.pk %}" class="rl-act" title="Edit">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                </a>
+                <button type="button" class="rl-act rl-act-del" title="Delete"
+                        data-delete-url="{% url 'finance:recurring_delete' r.pk %}"
+                        data-delete-name="{{ r.description|escapejs }}"
+                        data-delete-type="recurring">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="rl-empty">
+        <div class="rl-empty-emoji">🔁</div>
+        <h2>No schedules yet</h2>
+        <p>Automate rent, salary, subscriptions — anything that repeats. They'll appear here.</p>
+        <a href="{% url 'finance:recurring_create' %}" class="rl-new">Create your first</a>
+    </div>
+    {% endif %}
+
+    <!-- Toggle confirm modal -->
+    <div class="rlc-modal" id="toggleModal" aria-hidden="true">
+        <div class="rlc-backdrop" data-rlc-close></div>
+        <div class="rlc-panel">
+            <div class="rlc-icon">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+            </div>
+            <h3 class="rlc-title" id="toggleTitle">Pause this schedule?</h3>
+            <p class="rlc-desc" id="toggleDesc"></p>
+            <form method="post" id="toggleForm" style="margin:0;">
+                {% csrf_token %}
+                <div class="rlc-actions">
+                    <button type="button" class="rlc-btn rlc-btn-ghost" data-rlc-close>Cancel</button>
+                    <button type="submit" class="rlc-btn rlc-btn-primary" id="toggleConfirm">Confirm</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Run-now confirm modal -->
+    <div class="rlc-modal" id="runModal" aria-hidden="true">
+        <div class="rlc-backdrop" data-rlc-close></div>
+        <div class="rlc-panel">
+            <div class="rlc-icon rlc-icon-success">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </div>
+            <h3 class="rlc-title">Run this now?</h3>
+            <p class="rlc-desc" id="runDesc"></p>
+            <form method="post" id="runForm" style="margin:0;">
+                {% csrf_token %}
+                <div class="rlc-actions">
+                    <button type="button" class="rlc-btn rlc-btn-ghost" data-rlc-close>Cancel</button>
+                    <button type="submit" class="rlc-btn rlc-btn-primary">Run now</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    "use strict";
+
+    // ── Filters ──
+    var filters = document.querySelectorAll('.rl-filter');
+    var rows = document.querySelectorAll('#recurringList .rl-row');
+    filters.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            filters.forEach(function (b) { b.classList.remove('rl-filter-active'); });
+            btn.classList.add('rl-filter-active');
+            var mode = btn.dataset.filter;
+            rows.forEach(function (r) {
+                r.style.display = (mode === 'all' || r.dataset.status === mode) ? '' : 'none';
+            });
+        });
+    });
+
+    // ── Toggle modal ──
+    var tModal = document.getElementById('toggleModal');
+    var tForm = document.getElementById('toggleForm');
+    var tTitle = document.getElementById('toggleTitle');
+    var tDesc = document.getElementById('toggleDesc');
+    var tConfirm = document.getElementById('toggleConfirm');
+
+    function openToggle(url, name, action) {
+        tForm.action = url;
+        if (action === 'pause') {
+            tTitle.textContent = 'Pause this schedule?';
+            tDesc.textContent = '“' + name + '” will stop creating transactions until you resume it.';
+            tConfirm.textContent = 'Yes, pause';
+            tConfirm.className = 'rlc-btn rlc-btn-warn';
+        } else {
+            tTitle.textContent = 'Resume this schedule?';
+            tDesc.textContent = '“' + name + '” will start creating transactions again on its next run date.';
+            tConfirm.textContent = 'Yes, resume';
+            tConfirm.className = 'rlc-btn rlc-btn-primary';
+        }
+        tModal.classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeToggle() {
+        tModal.classList.remove('open');
+        document.body.style.overflow = '';
+    }
+
+    // ── Run modal ──
+    var rModal = document.getElementById('runModal');
+    var rForm = document.getElementById('runForm');
+    var rDesc = document.getElementById('runDesc');
+    function openRun(url, name) {
+        rForm.action = url;
+        rDesc.textContent = 'A “' + name + '” transaction will be created immediately. The schedule keeps running normally.';
+        rModal.classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeRun() {
+        rModal.classList.remove('open');
+        document.body.style.overflow = '';
+    }
+
+    document.addEventListener('click', function (e) {
+        var tBtn = e.target.closest('[data-toggle-url]');
+        if (tBtn) {
+            e.preventDefault();
+            openToggle(tBtn.dataset.toggleUrl, tBtn.dataset.toggleName, tBtn.dataset.toggleAction);
+            return;
+        }
+        var rBtn = e.target.closest('[data-run-url]');
+        if (rBtn) {
+            e.preventDefault();
+            openRun(rBtn.dataset.runUrl, rBtn.dataset.runName);
+            return;
+        }
+        if (e.target.closest('[data-rlc-close]')) {
+            e.preventDefault();
+            closeToggle();
+            closeRun();
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { closeToggle(); closeRun(); }
+    });
+
+    // ── Auto-process due recurrings every 30s ──
+    var processUrl = "{% url 'finance:recurring_process_now' %}";
+    function getCSRF() {
+        var name = 'csrftoken';
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var c = cookies[i].trim();
+            if (c.indexOf(name + '=') === 0) return c.substring(name.length + 1);
+        }
+        return '';
+    }
+    function checkDue() {
+        if (document.hidden) return;
+        fetch(processUrl, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCSRF(),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data && data.created > 0) {
+                // New transactions were created — reload silently
+                location.reload();
+            }
+        })
+        .catch(function () {});
+    }
+
+    // Initial check + interval
+    checkDue();
+    setInterval(checkDue, 30000);
+
+    // Also check when the tab becomes visible again
+    document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) checkDue();
+    });
+})();
+</script>
+{% endblock %}

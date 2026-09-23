@@ -1,6 +1,7 @@
 from django import forms
 from django.utils import timezone
 from .models import Category, Transaction, Budget, Currency, UserCurrency
+from datetime import timedelta
 
 
 class CategoryForm(forms.ModelForm):
@@ -252,3 +253,120 @@ BulkTransactionFormSet = formset_factory(
     can_delete=True,
     validate_max=True,
 )
+
+
+
+# ═══════════════════════════════════════════════════════════
+# RECURRING TRANSACTION FORM
+# ═══════════════════════════════════════════════════════════
+from .models import RecurringTransaction
+
+
+class RecurringTransactionForm(forms.ModelForm):
+    """Recurring form with date + time for the first run."""
+    next_run_datetime = forms.DateTimeField(
+        label="First transaction",
+        widget=forms.DateTimeInput(
+            attrs={
+                "type": "datetime-local",
+                "class": "rf-input",
+                "id": "id_next_run_datetime",
+            },
+            format="%Y-%m-%dT%H:%M",
+        ),
+        input_formats=["%Y-%m-%dT%H:%M"],
+    )
+    end_datetime = forms.DateTimeField(
+        label="End date",
+        required=False,
+        widget=forms.DateTimeInput(
+            attrs={
+                "type": "datetime-local",
+                "class": "rf-input",
+                "id": "id_end_datetime",
+            },
+            format="%Y-%m-%dT%H:%M",
+        ),
+        input_formats=["%Y-%m-%dT%H:%M"],
+    )
+
+    class Meta:
+        model = RecurringTransaction
+        fields = [
+            "type", "amount", "currency", "category",
+            "description", "notes",
+            "frequency", "next_run_datetime", "end_datetime", "is_active",
+        ]
+        widgets = {
+            "type": forms.Select(attrs={"class": "rf-input", "id": "id_type"}),
+            "amount": forms.NumberInput(attrs={
+                "class": "rf-input", "step": "0.01", "min": "0",
+                "placeholder": "0.00", "inputmode": "decimal", "id": "id_amount",
+            }),
+            "currency": forms.Select(attrs={"class": "rf-input", "id": "id_currency"}),
+            "category": forms.Select(attrs={"class": "rf-input", "id": "id_category"}),
+            "description": forms.TextInput(attrs={
+                "class": "rf-input", "placeholder": "e.g. Rent, Netflix, Salary",
+                "id": "id_description",
+            }),
+            "notes": forms.Textarea(attrs={
+                "class": "rf-input", "rows": 3,
+                "placeholder": "Optional notes…", "id": "id_notes",
+            }),
+            "frequency": forms.Select(attrs={"class": "rf-input", "id": "id_frequency"}),
+            "is_active": forms.CheckboxInput(attrs={"class": "rf-checkbox", "id": "id_is_active"}),
+        }
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+        if user is not None:
+            self.fields["category"].queryset = Category.objects.filter(user=user)
+            self.fields["category"].required = False
+            uc_ids = UserCurrency.objects.filter(user=user).values_list("currency_id", flat=True)
+            self.fields["currency"].queryset = Currency.objects.filter(id__in=uc_ids)
+            if not self.instance.pk:
+                primary = UserCurrency.objects.filter(user=user, is_primary=True).first()
+                if primary:
+                    self.fields["currency"].initial = primary.currency
+
+                # Default next run: tomorrow at 9am
+                tomorrow = timezone.now().replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=1)
+                self.fields["next_run_datetime"].initial = tomorrow.strftime("%Y-%m-%dT%H:%M")
+            else:
+                # Edit: format existing values for datetime-local input
+                if self.instance.next_run_datetime:
+                    self.initial["next_run_datetime"] = self.instance.next_run_datetime.strftime("%Y-%m-%dT%H:%M")
+                if self.instance.end_datetime:
+                    self.initial["end_datetime"] = self.instance.end_datetime.strftime("%Y-%m-%dT%H:%M")
+
+    def clean(self):
+        cleaned = super().clean()
+        first = cleaned.get("next_run_datetime")
+        end = cleaned.get("end_datetime")
+        amount = cleaned.get("amount")
+        type_ = cleaned.get("type")
+        cat = cleaned.get("category")
+
+        if amount is not None and amount <= 0:
+            raise forms.ValidationError("Amount must be greater than zero.")
+
+        if first:
+            now = timezone.now()
+            # Allow up to 60 seconds of grace (form may take a moment)
+            if first < now - timedelta(minutes=1):
+                raise forms.ValidationError(
+                    "First transaction can't be in the past. Pick a future date and time."
+                )
+
+        if first and end and end < first:
+            raise forms.ValidationError(
+                "End date must be on or after the first transaction."
+            )
+
+        if cat and type_ and cat.type != type_:
+            raise forms.ValidationError(
+                f"Category is for {cat.type}s but you chose {type_}."
+            )
+        return cleaned
+

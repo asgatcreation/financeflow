@@ -38,3 +38,15 @@ class UserCurrencyAdmin(admin.ModelAdmin):
     list_display = ("user", "currency", "is_primary", "created_at")
     list_filter = ("is_primary", "currency")
     search_fields = ("user__username", "currency__code")
+    
+from .models import RecurringTransaction
+
+@admin.register(RecurringTransaction)
+class RecurringTransactionAdmin(admin.ModelAdmin):
+    list_display = ("description", "user", "type", "amount", "currency", "frequency", "next_run_datetime", "is_active")
+    list_filter = ("frequency", "is_active", "type", "currency")
+    search_fields = ("description", "user__username")
+    list_editable = ("is_active",)
+    date_hierarchy = "next_run_datetime"    
+    
+    

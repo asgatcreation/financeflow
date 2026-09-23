@@ -42,6 +42,14 @@ urlpatterns = [
     path("currencies/<int:pk>/remove/", views.CurrencyRemoveView.as_view(), name="currency_remove"),
     
     path("transactions/currency/<str:code>/", views.CurrencyDetailView.as_view(), name="currency_detail"),
-    #path("transactions/export/", views.ExportCSVView.as_view(), name="transaction_export"),   
+    # Recurring transactions
+    path("recurring/", views.RecurringListView.as_view(), name="recurring_list"),
+    path("recurring/new/", views.RecurringCreateView.as_view(), name="recurring_create"),
+    path("recurring/<int:pk>/edit/", views.RecurringUpdateView.as_view(), name="recurring_update"),
+    path("recurring/<int:pk>/delete/", views.RecurringDeleteView.as_view(), name="recurring_delete"),
+    path("recurring/<int:pk>/toggle/", views.RecurringToggleView.as_view(), name="recurring_toggle"),
+    path("cron/process-recurring/", views.ProcessRecurringView.as_view(), name="cron_process_recurring"),
+    path("recurring/<int:pk>/run-now/", views.RunRecurringNowView.as_view(), name="recurring_run_now"),
+    path("recurring/process-now/", views.ProcessRecurringNowView.as_view(), name="recurring_process_now"),
         
 ]

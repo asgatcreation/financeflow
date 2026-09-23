@@ -163,7 +163,7 @@ LOGIN_REDIRECT_URL = "finance:dashboard"
 LOGOUT_REDIRECT_URL = "finance:landing"
 
 LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
+TIME_ZONE = "Africa/Lagos"
 USE_I18N = True
 USE_TZ = True
 
