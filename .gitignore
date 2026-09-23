@@ -11,3 +11,4 @@ staticfiles/
 .idea/
 .vscode/
 media/
+cloudinary/
